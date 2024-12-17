@@ -1,5 +1,11 @@
 #include <bgfx/bgfx.h>
+#include <bx/platform.h>
 #include <GLFW/glfw3.h>
+
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#endif
+
 #include <string>
 
 int main(int argc, char** argv);
@@ -33,7 +39,10 @@ namespace Core {
     friend int ::main(int argc, char** argv);
 
   private:
-    static void glfwErrorCallback(int error, const char* description);
+#ifdef __EMSCRIPTEN__
+    static void emscriptenMainLoop();
+#endif
+
     static void windowSizeCallback(GLFWwindow* window, int width, int height);
 
   private:

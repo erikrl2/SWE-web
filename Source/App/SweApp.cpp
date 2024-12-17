@@ -78,7 +78,7 @@ namespace App {
     bgfx::touch(m_mainView);
 
     bgfx::dbgTextClear();
-    bgfx::dbgTextPrintf(1, 1, 0x0f, "Press F1 to toggle stats.");
+    bgfx::dbgTextPrintf(1, 1, 0x0f, "Press Tab to toggle stats.");
     bgfx::dbgTextPrintf(1, 3, 0x0f, "Current FPS: %.0f", fps);
     bgfx::setDebug(m_showStats ? BGFX_DEBUG_STATS : BGFX_DEBUG_TEXT);
 

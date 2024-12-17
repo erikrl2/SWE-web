@@ -1,10 +1,10 @@
 #include "Application.hpp"
 
 #include <bgfx/platform.h>
-#include <bx/platform.h>
 
 #include "ImGui/ImGuiBgfx.hpp"
 
+#ifndef __EMSCRIPTEN__
 #if BX_PLATFORM_LINUX
 #define GLFW_EXPOSE_NATIVE_X11
 #elif BX_PLATFORM_WINDOWS
@@ -13,6 +13,8 @@
 #define GLFW_EXPOSE_NATIVE_COCOA
 #endif
 #include <GLFW/glfw3native.h>
+#endif
+
 #include <iostream>
 
 namespace Core {
@@ -28,7 +30,9 @@ namespace Core {
     }
     s_app = this;
 
-    glfwSetErrorCallback(glfwErrorCallback);
+    glfwSetErrorCallback([](int error, const char* description) {
+      std::cerr << "GLFW error " << error << ": " << description << std::endl;
+    });
 
     if (!glfwInit()) {
       std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -42,8 +46,7 @@ namespace Core {
       return;
     }
 
-    // Set useful event callbacks
-    glfwSetWindowSizeCallback(m_window, windowSizeCallback);
+    glfwSetFramebufferSizeCallback(m_window, windowSizeCallback); // works only for desktop
 
     bgfx::renderFrame(); // signals bgfx not to create a render thread
 
@@ -55,12 +58,14 @@ namespace Core {
     bgfxInit.platformData.nwh = (void*)glfwGetCocoaWindow(window);
 #elif BX_PLATFORM_WINDOWS
     bgfxInit.platformData.nwh = (void*)glfwGetWin32Window(window);
+#elif __EMSCRIPTEN__
+    bgfxInit.platformData.nwh = (void*)"#canvas";
 #endif
 
     glfwGetWindowSize(m_window, &m_width, &m_height);
     bgfxInit.resolution.width  = (uint32_t)m_width;
     bgfxInit.resolution.height = (uint32_t)m_height;
-    bgfxInit.resolution.reset  = BGFX_RESET_VSYNC; // This does not seem to work...
+    bgfxInit.resolution.reset  = BGFX_RESET_VSYNC;
 
     if (!bgfx::init(bgfxInit)) {
       std::cerr << "Failed to initialize bgfx" << std::endl;
@@ -82,7 +87,37 @@ namespace Core {
     glfwTerminate();
   }
 
+#ifdef __EMSCRIPTEN__
+  EM_JS(int, getCanvasWidth, (), { return document.getElementById('canvas').width; });
+  EM_JS(int, getCanvasHeight, (), { return document.getElementById('canvas').height; });
+
+  void Application::emscriptenMainLoop() {
+    glfwPollEvents();
+
+    if (glfwWindowShouldClose(s_app->m_window)) {
+      emscripten_cancel_main_loop();
+      return;
+    }
+
+    int width  = getCanvasWidth();
+    int height = getCanvasHeight();
+    if (width != s_app->m_width || height != s_app->m_height) {
+      glfwSetWindowSize(s_app->m_window, width, height);
+      windowSizeCallback(s_app->m_window, width, height);
+    }
+
+    ImGuiBgfx::beginImGuiFrame();
+    s_app->updateImGui();
+    ImGuiBgfx::endImGuiFrame();
+
+    s_app->update();
+  }
+#endif
+
   void Application::run() {
+#ifdef __EMSCRIPTEN__
+    emscripten_set_main_loop(emscriptenMainLoop, 0, true);
+#else
     while (!glfwWindowShouldClose(m_window)) {
       glfwPollEvents();
 
@@ -92,9 +127,8 @@ namespace Core {
 
       update();
     }
+#endif
   }
-
-  void Application::glfwErrorCallback(int error, const char* description) { std::cerr << "GLFW error " << error << ": " << description << std::endl; }
 
   void Application::windowSizeCallback(GLFWwindow*, int width, int height) {
     s_app->m_width  = width;
