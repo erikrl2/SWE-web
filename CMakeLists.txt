@@ -58,14 +58,6 @@ target_compile_options(SWE-Interface INTERFACE
   -Wpedantic
 )
 
-set(SHADER_DIR ${CMAKE_SOURCE_DIR}/Assets/Shaders CACHE PATH "Path to shader files")
-add_custom_target(
-    compile_shaders ALL
-    COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk SHADER_DIR=${SHADER_DIR}/ BGFX_DIR=${BGFX_DIR}/ | tee
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
-    COMMENT "Compiling shaders to header files using shader.mk"
-)
-
 option(ENABLE_SINGLE_PRECISION "Enable single floating-point precision" OFF)
 if(ENABLE_SINGLE_PRECISION)
   target_compile_definitions(SWE-Interface INTERFACE ENABLE_SINGLE_PRECISION)
@@ -79,5 +71,13 @@ endif()
 find_package(bgfx REQUIRED)
 find_package(ImGui REQUIRED)
 target_link_libraries(SWE-Interface INTERFACE bgfx bx imgui)
+
+set(SHADER_DIR ${CMAKE_SOURCE_DIR}/Assets/Shaders CACHE PATH "Path to shader files")
+add_custom_target(
+    compile_shaders ALL
+    COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk SHADER_DIR=${SHADER_DIR}/ BGFX_DIR=${BGFX_DIR}/ | tee
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
+    COMMENT "Compiling shaders to header files using shader.mk"
+)
 
 add_subdirectory(Source)
