@@ -1,121 +1,162 @@
 #include "SweApp.hpp"
 
+#include "Scenarios/TestScenario.hpp"
+
 #include <bgfx/embedded_shader.h>
 #include <bx/math.h>
 #include <imgui.h>
 #include <iostream>
 
-#include "swe/fs_cubes.bin.h"
-#include "swe/vs_cubes.bin.h"
+#include "swe/fs_swe.bin.h"
+#include "swe/vs_swe.bin.h"
 
 namespace App {
 
-  struct CubeVertex {
-    float    x, y, z;
-    uint32_t abrg;
-  };
-
   static const bgfx::EmbeddedShader shaders[] = {
-    BGFX_EMBEDDED_SHADER(vs_cubes),
-    BGFX_EMBEDDED_SHADER(fs_cubes),
+    BGFX_EMBEDDED_SHADER(vs_swe),
+    BGFX_EMBEDDED_SHADER(fs_swe),
 
     BGFX_EMBEDDED_SHADER_END()
   };
 
-  static CubeVertex cubeVertices[] = {
-    {-1.0f, 1.0f, 1.0f, 0xff000000},
-    {1.0f, 1.0f, 1.0f, 0xff0000ff},
-    {-1.0f, -1.0f, 1.0f, 0xff00ff00},
-    {1.0f, -1.0f, 1.0f, 0xff00ffff},
-    {-1.0f, 1.0f, -1.0f, 0xffff0000},
-    {1.0f, 1.0f, -1.0f, 0xffff00ff},
-    {-1.0f, -1.0f, -1.0f, 0xffffff00},
-    {1.0f, -1.0f, -1.0f, 0xffffffff},
-  };
+  bgfx::VertexLayout CellVertex::layout;
 
-  static const uint16_t cubeIndices[] = {
-    0, 1, 2, 1, 3, 2, 4, 6, 5, 5, 6, 7, 0, 2, 4, 4, 2, 6, 1, 5, 3, 5, 7, 3, 0, 4, 1, 4, 5, 1, 2, 3, 6, 6, 3, 7,
+  void CellVertex::init() {
+    layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end();
   };
 
   SweApp::SweApp():
-    Core::Application("Demo", 1280, 720) {
+    Core::Application("Swe", 1280, 720) {
     glfwSetKeyCallback(m_window, keyCallback);
-    // glfwSetCursorPosCallback(m_window, cursorPosCallback);
-    // glfwSetMouseButtonCallback(m_window, mouseButtonCallback);
-    // glfwSetScrollCallback(m_window, scrollCallback);
-    // glfwSetDropCallback(m_window, dropFileCallback);
 
-    bgfx::VertexLayout cubeVertexLayout;
-    cubeVertexLayout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true).end();
-    m_vertexBuffer = bgfx::createVertexBuffer(bgfx::makeRef(cubeVertices, sizeof(cubeVertices)), cubeVertexLayout);
-    m_indexBuffer  = bgfx::createIndexBuffer(bgfx::makeRef(cubeIndices, sizeof(cubeIndices)));
+    CellVertex::init();
+
+    // u_mtx = bgfx::createUniform("...", bgfx::UniformType::...);
 
     bgfx::RendererType::Enum type = bgfx::getRendererType();
-
-    bgfx::ShaderHandle vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_cubes");
-    bgfx::ShaderHandle fragmentShader = bgfx::createEmbeddedShader(shaders, type, "fs_cubes");
-
+    bgfx::ShaderHandle vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
+    bgfx::ShaderHandle fragmentShader = bgfx::createEmbeddedShader(shaders, type, "fs_swe");
     m_program = bgfx::createProgram(vertexShader, fragmentShader, true);
+
+    int n = 10;
+    Scenarios::TestScenario scenario(n);
+    int nx = n, ny = n;
+    float dx = 1.0f, dy = 1.0f;
+
+    m_height = Float2D<float>(ny + 2, nx + 2);
+
+    for (int j = 1; j <= ny; j++) {
+      for (int i = 1; i <= nx; i++) {
+        float x = (i - 0.5f) * dx;
+        float y = (j - 0.5f) * dy;
+        m_height[j][i] = scenario.getWaterHeight(x, y);
+      }
+    }
+
+    // TODO: Do scenario loading properly (and use DimensionalSplittingBlock)
+
   }
 
   SweApp::~SweApp() {
-    bgfx::destroy(m_indexBuffer);
-    bgfx::destroy(m_vertexBuffer);
+    bgfx::destroy(m_program);
+    // bgfx::destroy(...);
   }
 
-  void SweApp::updateImGui() { ImGui::ShowDemoWindow(); }
+  void SweApp::updateImGui() {
+    // TODO: Control uniform for color calculation in shader (min/max clipping etc)
+    // TODO: Control uniform for height exaggeration
+    // TODO: Control uniform for camera clipping (near/far)
+  }
 
-  void SweApp::update() {
-    static unsigned counter = 0;
-
-    // Calculate fps
+  static double deltaTime() {
     static double lastTime    = glfwGetTime();
     double        currentTime = glfwGetTime();
     double        deltaTime   = currentTime - lastTime;
     lastTime                  = currentTime;
-    double fps                = 1.0 / deltaTime;
+    return deltaTime;
+  }
 
-    bgfx::touch(m_mainView);
-
+  void SweApp::updateDebugText() {
     bgfx::dbgTextClear();
-    bgfx::dbgTextPrintf(1, 1, 0x0f, "Press Tab to toggle stats.");
-    bgfx::dbgTextPrintf(1, 3, 0x0f, "Current FPS: %.0f", fps);
-    bgfx::setDebug(m_showStats ? BGFX_DEBUG_STATS : BGFX_DEBUG_TEXT);
+    bgfx::dbgTextPrintf(1, 1, 0x0f, "Current FPS: %.1f", 1.0 / deltaTime());
+    bgfx::setDebug(m_toggleDebugRender ? BGFX_DEBUG_WIREFRAME : BGFX_DEBUG_TEXT);
+  }
 
-    const bx::Vec3 at  = {0.0f, 0.0f, 0.0f};
-    const bx::Vec3 eye = {0.0f, 0.0f, -5.0f};
+  void SweApp::update() {
+    bgfx::touch(0);
 
-    float view[16];
-    bx::mtxLookAt(view, eye, at);
-    float proj[16];
-    bx::mtxProj(proj, 60.0f, float(m_width) / float(m_height), 0.1f, 100.0f, bgfx::getCaps()->homogeneousDepth);
-    bgfx::setViewTransform(0, view, proj);
+    updateDebugText();
 
-    float mtx[16];
-    bx::mtxRotateXY(mtx, counter * 0.01f, counter * 0.01f);
-    bgfx::setTransform(mtx);
+    // TODO: Don't hardcode values from scenario
 
-    bgfx::setVertexBuffer(0, m_vertexBuffer);
-    bgfx::setIndexBuffer(m_indexBuffer);
+    {
+      // TODO: Try out perspective projection and 3d camera
+      float proj[16];
+      float aspect = (float) m_windowWidth / (float) m_windowHeight;
+      float left = 0.0f, right = 10.0f, bottom = 0.0f, top = 10.0f; // boundary pos
+      if (aspect > 1.0f) {
+        left *= aspect;
+        right *= aspect;
+      } else {
+        bottom /= aspect;
+        top /= aspect;
+      }
+      bx::mtxOrtho(proj, left, right, bottom, top, 0.0f, 50.0f, 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
 
+      bgfx::setViewTransform(0, nullptr, proj);
+    }
+
+    bgfx::TransientVertexBuffer tvb;
+    bgfx::TransientIndexBuffer tib;
+    bgfx::allocTransientBuffers(&tvb, CellVertex::layout, 10 * 10, &tib, 9 * 9 * 6);
+
+    Float2D<CellVertex> vertices(10, 10, (CellVertex*) tvb.data);
+    for (int j = 0; j < 10; j++) {
+      for (int i = 0; i < 10; i++) {
+        float x = i + 0.5f;
+        float y = j + 0.5f;
+        vertices[j][i] = {x, y, m_height[j+1][i+1]};
+      }
+    }
+
+    uint16_t* indices = (uint16_t*) tib.data;
+    CellVertex* base = vertices.getData();
+    int c = 0;
+
+    for (int j = 0; j < 10 - 1; j++) {
+      for (int i = 0; i < 10 - 1; i++) {
+        int topLeft = &vertices[j][i] - base;
+        int topRight = topLeft + 1;
+        int bottomLeft = &vertices[j + 1][i] - base;
+        int bottomRight = bottomLeft + 1;
+
+        indices[c++] = topLeft;
+        indices[c++] = topRight;
+        indices[c++] = bottomLeft;
+        indices[c++] = bottomLeft;
+        indices[c++] = topRight;
+        indices[c++] = bottomRight;
+      }
+    }
+
+    bgfx::setState(BGFX_STATE_DEFAULT);
+    // bgfx::setState(BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS); // For debugging culling issues
+
+    bgfx::setIndexBuffer(&tib);
+    bgfx::setVertexBuffer(0, &tvb);
     bgfx::submit(0, m_program);
 
-    bgfx::frame();
+    // bgfx::setUniform(...);
 
-    counter++;
+    bgfx::frame();
   }
 
   void SweApp::keyCallback(GLFWwindow*, int key, int, int action, int) {
     if (key == GLFW_KEY_TAB && action == GLFW_PRESS) {
-      SweApp& app     = dynamic_cast<SweApp&>(*Core::Application::get());
-      app.m_showStats = !app.m_showStats;
+      SweApp& app = dynamic_cast<SweApp&>(*Core::Application::get());
+      app.m_toggleDebugRender = !app.m_toggleDebugRender;
     }
   }
-
-  // void SweApp::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {}
-  // void SweApp::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {}
-  // void SweApp::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {}
-  // void SweApp::dropFileCallback(GLFWwindow* window, int count, const char** paths) {}
 
 } // namespace App
 

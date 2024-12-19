@@ -21,8 +21,8 @@ namespace Core {
 
   Application::Application(const std::string& title, int width, int height):
     m_title(title),
-    m_width(width),
-    m_height(height),
+    m_windowWidth(width),
+    m_windowHeight(height),
     m_mainView(0) {
     if (s_app) {
       assert(false);
@@ -40,7 +40,7 @@ namespace Core {
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    m_window = glfwCreateWindow(m_width, m_height, m_title.c_str(), NULL, NULL);
+    m_window = glfwCreateWindow(m_windowWidth, m_windowHeight, m_title.c_str(), NULL, NULL);
     if (!m_window) {
       std::cerr << "Failed to create GLFW window" << std::endl;
       return;
@@ -62,9 +62,9 @@ namespace Core {
     bgfxInit.platformData.nwh = (void*)"#canvas";
 #endif
 
-    glfwGetWindowSize(m_window, &m_width, &m_height);
-    bgfxInit.resolution.width  = (uint32_t)m_width;
-    bgfxInit.resolution.height = (uint32_t)m_height;
+    glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
+    bgfxInit.resolution.width  = (uint32_t)m_windowWidth;
+    bgfxInit.resolution.height = (uint32_t)m_windowHeight;
     bgfxInit.resolution.reset  = BGFX_RESET_VSYNC;
 
     if (!bgfx::init(bgfxInit)) {
@@ -101,7 +101,7 @@ namespace Core {
 
     int width  = getCanvasWidth();
     int height = getCanvasHeight();
-    if (width != s_app->m_width || height != s_app->m_height) {
+    if (width != s_app->m_windowWidth || height != s_app->m_windowHeight) {
       glfwSetWindowSize(s_app->m_window, width, height);
       windowSizeCallback(s_app->m_window, width, height);
     }
@@ -131,8 +131,8 @@ namespace Core {
   }
 
   void Application::windowSizeCallback(GLFWwindow*, int width, int height) {
-    s_app->m_width  = width;
-    s_app->m_height = height;
+    s_app->m_windowWidth  = width;
+    s_app->m_windowHeight = height;
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
   }

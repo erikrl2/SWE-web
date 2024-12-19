@@ -26,8 +26,8 @@ namespace Core {
 
   protected:
     std::string m_title;
-    int         m_width;
-    int         m_height;
+    int         m_windowWidth;
+    int         m_windowHeight;
 
     GLFWwindow* m_window;
 

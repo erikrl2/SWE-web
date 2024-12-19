@@ -58,11 +58,6 @@ target_compile_options(SWE-Interface INTERFACE
   -Wpedantic
 )
 
-option(ENABLE_SINGLE_PRECISION "Enable single floating-point precision" OFF)
-if(ENABLE_SINGLE_PRECISION)
-  target_compile_definitions(SWE-Interface INTERFACE ENABLE_SINGLE_PRECISION)
-endif()
-
 if(NOT EMSCRIPTEN)
   find_package(glfw3 REQUIRED)
   target_link_libraries(SWE-Interface INTERFACE glfw)
