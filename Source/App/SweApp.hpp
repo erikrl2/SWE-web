@@ -28,9 +28,18 @@ namespace App {
   private:
     bgfx::ProgramHandle m_program;
 
-    Float2D<float> m_height;
+    bgfx::UniformHandle u_color;
+    bgfx::UniformHandle u_util;
+
+    float m_util[4]{};
+    float m_color[4] = {0.0f, 0.0f, 1.0f, 1.0f};
+    float m_cameraClipping[2] = {0.0f, 20.0f};
 
     bool m_toggleDebugRender = false;
+
+  private:
+    Float2D<float> m_height; // Later handeled by DimSplittingBlock class
+
   };
 
 } // namespace App

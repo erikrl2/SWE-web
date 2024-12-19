@@ -25,13 +25,16 @@ namespace App {
     layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end();
   };
 
+  enum UtilUniform { colorAdd, colorDiv, heightExag, }; // Has to match order in shader
+
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
     glfwSetKeyCallback(m_window, keyCallback);
 
     CellVertex::init();
 
-    // u_mtx = bgfx::createUniform("...", bgfx::UniformType::...);
+    u_color = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
+    u_util  = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
 
     bgfx::RendererType::Enum type = bgfx::getRendererType();
     bgfx::ShaderHandle vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
@@ -55,17 +58,33 @@ namespace App {
 
     // TODO: Do scenario loading properly (and use DimensionalSplittingBlock)
 
+    m_util[colorAdd]   = 0.0f;
+    m_util[colorDiv]   = 20.0f;
+    m_util[heightExag] = 1.0f;
   }
 
   SweApp::~SweApp() {
     bgfx::destroy(m_program);
-    // bgfx::destroy(...);
+    bgfx::destroy(u_color);
+    bgfx::destroy(u_util);
   }
 
   void SweApp::updateImGui() {
-    // TODO: Control uniform for color calculation in shader (min/max clipping etc)
-    // TODO: Control uniform for height exaggeration
-    // TODO: Control uniform for camera clipping (near/far)
+    ImGui::Begin("SWE", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+
+    ImGui::ColorEdit4("Color", m_color, ImGuiColorEditFlags_NoAlpha);
+    ImGui::Separator();
+    ImGui::DragFloat("ColorAdd", &m_util[colorAdd], 0.01f);
+    ImGui::DragFloat("ColorDiv", &m_util[colorDiv], 0.01f, 0.1f, 100.0f);
+    ImGui::Separator();
+    ImGui::DragFloat("Near Clip", &m_cameraClipping[0], 0.1f);
+    ImGui::DragFloat("Far Clip", &m_cameraClipping[1], 0.1f);
+    ImGui::Separator();
+    ImGui::DragFloat("Height Exaggeration", &m_util[heightExag], 0.01f, 0.0f, 100.0f);
+    ImGui::Separator();
+    ImGui::Checkbox("Wireframe", &m_toggleDebugRender);
+
+    ImGui::End();
   }
 
   static double deltaTime() {
@@ -92,7 +111,7 @@ namespace App {
     {
       // TODO: Try out perspective projection and 3d camera
       float proj[16];
-      float aspect = (float) m_windowWidth / (float) m_windowHeight;
+      float aspect = (float) m_windowWidth / (float) m_windowHeight; // TODO: Ensure non-zero
       float left = 0.0f, right = 10.0f, bottom = 0.0f, top = 10.0f; // boundary pos
       if (aspect > 1.0f) {
         left *= aspect;
@@ -101,7 +120,7 @@ namespace App {
         bottom /= aspect;
         top /= aspect;
       }
-      bx::mtxOrtho(proj, left, right, bottom, top, 0.0f, 50.0f, 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
+      bx::mtxOrtho(proj, left, right, bottom, top, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
 
       bgfx::setViewTransform(0, nullptr, proj);
     }
@@ -130,6 +149,7 @@ namespace App {
         int bottomLeft = &vertices[j + 1][i] - base;
         int bottomRight = bottomLeft + 1;
 
+        // Draw clockwise because y is flipped from projection and CW-culling is default
         indices[c++] = topLeft;
         indices[c++] = topRight;
         indices[c++] = bottomLeft;
@@ -139,14 +159,15 @@ namespace App {
       }
     }
 
+    bgfx::setUniform(u_color, m_color);
+    bgfx::setUniform(u_util, m_util);
+
     bgfx::setState(BGFX_STATE_DEFAULT);
     // bgfx::setState(BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS); // For debugging culling issues
 
     bgfx::setIndexBuffer(&tib);
     bgfx::setVertexBuffer(0, &tvb);
     bgfx::submit(0, m_program);
-
-    // bgfx::setUniform(...);
 
     bgfx::frame();
   }
