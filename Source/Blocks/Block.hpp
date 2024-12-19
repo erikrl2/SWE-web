@@ -29,11 +29,11 @@
 
 #pragma once
 
+#include "Scenarios/Scenario.hpp"
 #include "Types/BoundaryEdge.hpp"
 #include "Types/BoundaryType.hpp"
 #include "Types/Float2D.hpp"
 #include "Types/RealType.hpp"
-#include "Scenarios/Scenario.hpp"
 
 namespace Blocks {
 
@@ -51,9 +51,9 @@ namespace Blocks {
     // hd, ud, and vd are respective CUDA arrays on GPU
     Float2D<RealType> h_;  ///< Array that holds the water height for each element
     Float2D<RealType> hu_; ///< Array that holds the x-component of the momentum for each element (water height h
-                                  ///< multiplied by velocity in x-direction)
+                           ///< multiplied by velocity in x-direction)
     Float2D<RealType> hv_; ///< Array that holds the y-component of the momentum for each element (water height h
-                                  ///< multiplied by velocity in y-direction)
+                           ///< multiplied by velocity in y-direction)
     Float2D<RealType> b_;  ///< Array that holds the bathymetry data (sea floor elevation) for each element
 
     /// Type of boundary conditions at Left, Right, Top, and Bottom boundary
@@ -132,9 +132,6 @@ namespace Blocks {
      * Destructor: de-allocate all variables
      */
     virtual ~Block() = default;
-
-    static Block* getBlockInstance(int nx, int ny, RealType dx, RealType dy);
-    static Block* getBlockInstance(int nx, int ny, RealType dx, RealType dy, Float2D<RealType>& h, Float2D<RealType>& hu, Float2D<RealType>& hv);
 
     /// Initialises unknowns to a specific scenario
     /**
@@ -259,6 +256,16 @@ namespace Blocks {
     int getNx() const;
     /// Returns #ny, i.e. the grid size in y-direction
     int getNy() const;
+
+    /// Returns #dx, i.e. the mesh size in x-direction
+    RealType getDx() const;
+    /// Returns #dy, i.e. the mesh size in y-direction
+    RealType getDy() const;
+
+    /// Returns the x-coordinate of the origin (left-bottom corner) of the Cartesian grid
+    RealType getOffsetX() const;
+    /// Returns the y-coordinate of the origin (left-bottom corner) of the Cartesian grid
+    RealType getOffsetY() const;
   };
 
 } // namespace Blocks

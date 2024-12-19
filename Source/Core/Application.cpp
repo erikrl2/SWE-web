@@ -30,9 +30,7 @@ namespace Core {
     }
     s_app = this;
 
-    glfwSetErrorCallback([](int error, const char* description) {
-      std::cerr << "GLFW error " << error << ": " << description << std::endl;
-    });
+    glfwSetErrorCallback([](int error, const char* description) { std::cerr << "GLFW error " << error << ": " << description << std::endl; });
 
     if (!glfwInit()) {
       std::cerr << "Failed to initialize GLFW" << std::endl;

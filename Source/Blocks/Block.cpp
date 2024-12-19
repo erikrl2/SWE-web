@@ -52,7 +52,7 @@ Blocks::Block::Block(int nx, int ny, RealType dx, RealType dy):
   offsetY_(0) {
 
   for (int i = 0; i < 4; i++) {
-    boundary_[i]  = BoundaryType::Passive;
+    boundary_[i] = BoundaryType::Passive;
   }
 }
 
@@ -172,7 +172,7 @@ RealType Blocks::Block::simulate(RealType tStart, RealType tEnd) {
 }
 
 void Blocks::Block::setBoundaryType(BoundaryEdge edge, BoundaryType boundaryType) {
-  boundary_[edge]  = boundaryType;
+  boundary_[edge] = boundaryType;
 
   if (boundaryType == BoundaryType::Outflow || boundaryType == BoundaryType::Wall) {
     // One of the boundary was changed to BoundaryType::Outflow or BoundaryType::Wall
@@ -433,3 +433,11 @@ void Blocks::Block::setBoundaryConditions() {
 int Blocks::Block::getNx() const { return nx_; }
 
 int Blocks::Block::getNy() const { return ny_; }
+
+RealType Blocks::Block::getDx() const { return dx_; }
+
+RealType Blocks::Block::getDy() const { return dy_; }
+
+RealType Blocks::Block::getOffsetX() const { return offsetX_; }
+
+RealType Blocks::Block::getOffsetY() const { return offsetY_; }

@@ -17,7 +17,7 @@ namespace Blocks {
    * This class solves the 2D shallow water equations by splitting them into 1D problems
    * and solving them sequentially using the F-wave solver.
    */
-  class DimensionalSplitting: public Block {
+  class DimensionalSplittingBlock: public Block {
   public:
     /**
      * @brief Construct a new Dimensional Splitting solver
@@ -26,9 +26,9 @@ namespace Blocks {
      * @param dx Cell size in x-direction
      * @param dy Cell size in y-direction
      */
-    DimensionalSplitting(int nx, int ny, RealType dx, RealType dy);
+    DimensionalSplittingBlock(int nx, int ny, RealType dx, RealType dy);
 
-    ~DimensionalSplitting() = default;
+    DimensionalSplittingBlock(const DimensionalSplittingBlock&) = delete;
 
     /**
      * @brief Compute numerical fluxes using the F-wave solver

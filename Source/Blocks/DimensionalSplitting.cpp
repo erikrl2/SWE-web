@@ -6,14 +6,14 @@
 
 namespace Blocks {
 
-  DimensionalSplitting::DimensionalSplitting(int nx, int ny, RealType dx, RealType dy):
+  DimensionalSplittingBlock::DimensionalSplittingBlock(int nx, int ny, RealType dx, RealType dy):
     Block(nx, ny, dx, dy),
     hNetUpdatesLeft_(ny + 2, nx + 1),
     hNetUpdatesRight_(ny + 2, nx + 1),
     huNetUpdatesLeft_(ny + 2, nx + 1),
     huNetUpdatesRight_(ny + 2, nx + 1) {}
 
-  void DimensionalSplitting::computeNumericalFluxes() {
+  void DimensionalSplittingBlock::computeNumericalFluxes() {
     // X-Sweep:
 
     RealType maxWaveSpeedX = RealType(0.0);
@@ -54,7 +54,7 @@ namespace Blocks {
     maxTimeStep_ = dx_ / maxWaveSpeedX * RealType(0.4);
   }
 
-  void DimensionalSplitting::updateUnknowns(RealType dt) {
+  void DimensionalSplittingBlock::updateUnknowns(RealType dt) {
 // Loop over all inner cells
 #ifdef ENABLE_OPENMP
 #pragma omp parallel for schedule(static)

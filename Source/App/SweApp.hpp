@@ -1,5 +1,5 @@
+#include "Blocks/DimensionalSplitting.hpp"
 #include "Core/Application.hpp"
-
 #include "Types/Float2D.hpp"
 
 namespace App {
@@ -8,8 +8,10 @@ namespace App {
     float x, y, z;
 
     static bgfx::VertexLayout layout;
-    static void init();
+    static void               init();
   };
+
+  enum class ScenarioType { Tsunami, ArtificialTsunami, Test, Count };
 
   class SweApp: public Core::Application {
   public:
@@ -20,10 +22,7 @@ namespace App {
     void update() override;
     void updateImGui() override;
 
-    void updateDebugText();
-
-  private:
-    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    void loadBlock(ScenarioType scenarioType, int nx, int ny);
 
   private:
     bgfx::ProgramHandle m_program;
@@ -32,14 +31,15 @@ namespace App {
     bgfx::UniformHandle u_util;
 
     float m_util[4]{};
-    float m_color[4] = {0.0f, 0.0f, 1.0f, 1.0f};
-    float m_cameraClipping[2] = {0.0f, 20.0f};
+    float m_color[4]          = {1.0f, 1.0f, 1.0f, 1.0f};
+    float m_cameraClipping[2] = {0.0f, 10000.0f};
 
-    bool m_toggleDebugRender = false;
+    int m_debugFlags = BGFX_DEBUG_NONE;
 
   private:
-    Float2D<float> m_height; // Later handeled by DimSplittingBlock class
+    Blocks::Block* m_block;
 
+    double m_simulationTime = 0.0;
   };
 
 } // namespace App

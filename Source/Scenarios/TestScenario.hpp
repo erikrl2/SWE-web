@@ -16,6 +16,8 @@ namespace Scenarios {
     TestScenario(int n):
       n(n) {}
 
+    TestScenario(const TestScenario& other) = delete;
+
     RealType getWaterHeight(RealType x, RealType y) const override {
       return x + y; // x,y in [1,n]
     }

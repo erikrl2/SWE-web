@@ -22,10 +22,7 @@ namespace Scenarios {
      */
     ArtificialTsunamiScenario(double endSimulationTime, BoundaryType boundaryType);
 
-    /**
-     * @brief Default destructor.
-     */
-    ~ArtificialTsunamiScenario() override = default;
+    ArtificialTsunamiScenario(const ArtificialTsunamiScenario&) = delete;
 
     /**
      * @brief Gets the initial water height at a specific point.

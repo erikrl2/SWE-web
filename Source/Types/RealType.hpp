@@ -1,3 +1,3 @@
 #pragma once
 
-using RealType = float;
+using RealType = float; // TODO: Try double
