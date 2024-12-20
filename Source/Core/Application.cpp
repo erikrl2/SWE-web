@@ -70,7 +70,7 @@ namespace Core {
       return;
     }
 
-    bgfx::setViewClear(m_mainView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, 0x443355FF);
+    bgfx::setViewClear(m_mainView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
     bgfx::setViewRect(m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     ImGuiBgfx::createImGuiContext(m_window);

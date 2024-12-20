@@ -11,7 +11,7 @@ namespace App {
     static void               init();
   };
 
-  enum class ScenarioType { Tsunami, ArtificialTsunami, Test, Count };
+  enum class ScenarioType { None, Test, ArtificialTsunami, Tsunami, Count };
 
   class SweApp: public Core::Application {
   public:
@@ -22,7 +22,10 @@ namespace App {
     void update() override;
     void updateImGui() override;
 
-    void loadBlock(ScenarioType scenarioType, int nx, int ny);
+    void updateTransform();
+    void submitHeightGrid();
+
+    void loadBlock();
 
   private:
     bgfx::ProgramHandle m_program;
@@ -34,10 +37,11 @@ namespace App {
     float m_color[4]          = {1.0f, 1.0f, 1.0f, 1.0f};
     float m_cameraClipping[2] = {0.0f, 10000.0f};
 
-    int m_debugFlags = BGFX_DEBUG_NONE;
-
   private:
-    Blocks::Block* m_block;
+    Blocks::Block* m_block = nullptr;
+
+    ScenarioType m_currentScenario = ScenarioType::None;
+    int          m_currentDimensions[2]{};
 
     double m_simulationTime = 0.0;
   };
