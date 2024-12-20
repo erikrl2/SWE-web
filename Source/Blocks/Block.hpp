@@ -145,7 +145,7 @@ namespace Blocks {
      * @param scenario Scenarios::Scenario, which is used during the setup.
      * @param useMultipleBlocks Are there multiple blocks?
      */
-    void initialiseScenario(RealType offsetX, RealType offsetY, Scenarios::Scenario& scenario);
+    void initialiseScenario(RealType offsetX, RealType offsetY, const Scenarios::Scenario& scenario);
 
     /// Sets the water height according to a given function
     /**

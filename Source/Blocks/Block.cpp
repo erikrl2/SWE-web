@@ -56,7 +56,7 @@ Blocks::Block::Block(int nx, int ny, RealType dx, RealType dy):
   }
 }
 
-void Blocks::Block::initialiseScenario(RealType offsetX, RealType offsetY, Scenarios::Scenario& scenario) {
+void Blocks::Block::initialiseScenario(RealType offsetX, RealType offsetY, const Scenarios::Scenario& scenario) {
   offsetX_ = offsetX;
   offsetY_ = offsetY;
 

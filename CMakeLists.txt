@@ -60,7 +60,9 @@ target_compile_options(SWE-Interface INTERFACE
 
 if(NOT EMSCRIPTEN)
   find_package(glfw3 REQUIRED)
-  target_link_libraries(SWE-Interface INTERFACE glfw)
+  find_package(NetCDF REQUIRED)
+  target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
+  target_link_libraries(SWE-Interface INTERFACE glfw ${NETCDF_LIBRARIES})
 endif()
 
 find_package(bgfx REQUIRED)

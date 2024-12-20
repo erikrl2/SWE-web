@@ -9,6 +9,7 @@
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
+#include "Scenarios/TsunamiScenario.hpp"
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
 
@@ -30,6 +31,8 @@ namespace App {
 
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
+    glfwSetDropCallback(m_window, dropFileCallback);
+
     bgfx::RendererType::Enum type           = bgfx::getRendererType();
     bgfx::ShaderHandle       vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
     bgfx::ShaderHandle       fragmentShader = bgfx::createEmbeddedShader(shaders, type, "fs_swe");
@@ -65,18 +68,33 @@ namespace App {
       m_scenario = new Scenarios::TestScenario(m_dimensions[0]);
       break;
     case ScenarioType::ArtificialTsunami:
-      // TODO: Implement maxSimulationTime and boundaryType selection
-      m_scenario = new Scenarios::ArtificialTsunamiScenario(100.0, BoundaryType::Wall);
+      // TODO: Implement BoundaryType selection
+      m_scenario = new Scenarios::ArtificialTsunamiScenario(0, BoundaryType::Wall);
       break;
-    case ScenarioType::Tsunami:
-    // TODO
-    default:
+    case ScenarioType::Tsunami: {
+#ifdef __EMSCRIPTEN__
+      std::cout << "Tsunami scenario not implemented in Emscripten" << std::endl;
+#else
+      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, 0, BoundaryType::Outflow, m_dimensions[0], m_dimensions[1]);
+      if (s->success()) {
+        m_scenario = s;
+        break;
+      } else {
+        std::cerr << "Failed to load Tsunami scenario" << std::endl;
+        delete s;
+      }
+#endif
+      [[fallthrough]];
+    }
+    case ScenarioType::None:
       m_scenarioType  = ScenarioType::None;
       m_dimensions[0] = 0;
       m_dimensions[1] = 0;
       m_block         = nullptr;
       m_scenario      = nullptr;
       return;
+    default:
+      assert(false); // Shouldn't happen
     }
 
     RealType left   = m_scenario->getBoundaryPos(BoundaryEdge::Left);
@@ -101,7 +119,7 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    const RealType* h = m_block->getWaterHeight().getData(); // TODO: Try h+b
+    const RealType* h = m_block->getWaterHeight().getData(); // TODO: Try h, hu, hv, b, h+b
 
     auto [min, max]               = std::minmax_element(h, h + (m_block->getNx() + 2) * (m_block->getNy() + 2));
     m_util[UtilIndex::hMin]       = (float)*min - 0.1f;
@@ -120,17 +138,19 @@ namespace App {
     if (m_playing) {
       m_block->setGhostLayer();
 
+#if 1 // First option needs more computation but is more stable for non-square cells
       m_block->computeMaxTimeStep();
       RealType dt = m_block->getMaxTimeStep();
       m_block->simulateTimeStep(dt);
-
-      // m_block->computeNumericalFluxes();
-      // RealType dt = m_block->getMaxTimeStep();
-      // m_block->updateUnknowns(dt);
+#else
+      m_block->computeNumericalFluxes();
+      RealType dt = m_block->getMaxTimeStep();
+      m_block->updateUnknowns(dt);
+#endif
 
       m_simulationTime += dt;
     }
-    submitHeightGrid();
+    submitMesh();
 
     bgfx::frame();
   }
@@ -144,30 +164,35 @@ namespace App {
     // TODO: Try out perspective projection and 3d camera
 
     float left   = (float)m_block->getOffsetX();
-    float right  = left + (float)m_block->getDx() * m_block->getNx();
+    float right  = left + (float)m_block->getDx() * m_dimensions[0];
     float bottom = (float)m_block->getOffsetY();
-    float top    = bottom + (float)m_block->getDy() * m_block->getNy();
+    float top    = bottom + (float)m_block->getDy() * m_dimensions[1];
 
-    float aspect = (float)m_windowWidth / (float)m_windowHeight;
+    // TODO: Fix issue with aspect ratio
+    // The domains aspect ration needs to be combined with aspect ratio of the window
 
-    if (aspect > 1.0f) {
-      left *= aspect;
-      right *= aspect;
-    } else {
-      bottom /= aspect;
-      top /= aspect;
-    }
+    // int domainWidth  = m_dimensions[0] * m_block->getDx();
+    // int domainHeight = m_dimensions[1] * m_block->getDy();
+
+    // float aspectDomain = (float)domainWidth / (float)domainHeight;
+    // float aspectWindow = (float)m_windowWidth / (float)m_windowHeight;
+
+    // if (aspect > 1.0f) {
+    //   left *= aspect;
+    //   right *= aspect;
+    // } else {
+    //   bottom /= aspect;
+    //   top /= aspect;
+    // }
 
     float proj[16];
     bx::mtxOrtho(proj, left, right, bottom, top, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
     bgfx::setViewTransform(0, nullptr, proj);
   }
 
-  void SweApp::submitHeightGrid() {
+  void SweApp::submitMesh() {
     if (!m_block)
       return;
-
-    // TODO: Only do all this if old code would've written to file
 
     int   nx      = m_dimensions[0];
     int   ny      = m_dimensions[1];
@@ -182,6 +207,7 @@ namespace App {
 
     Float2D<CellVertex> vertices(ny, nx, (CellVertex*)tvb.data);
 
+    // TODO: User selection between h, hu, hv, b, h+b
     const auto& heights = m_block->getWaterHeight();
     // const auto& bathymetry = m_block->getBathymetry();
 
@@ -298,13 +324,15 @@ namespace App {
       ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 194, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
       ImGui::Begin("Scenario Selection", &scenarioSelectionOpen, ImGuiWindowFlags_AlwaysAutoResize);
 
-      static int n[2] = {2, 2};
+      ImGui::Text("Hint: Tsunami Scenario is Desktop only");
+
+      static int          n[2]         = {2, 2};
+      static ScenarioType scenarioType = m_scenarioType;
+
       if (ImGui::InputInt2("Grid Dimensions (1-100)", n)) {
         n[0] = std::clamp(n[0], 2, 100);
         n[1] = std::clamp(n[1], 2, 100);
       }
-
-      static ScenarioType scenarioType = m_scenarioType;
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
           ScenarioType type       = (ScenarioType)i;
@@ -319,7 +347,15 @@ namespace App {
         ImGui::EndCombo();
       }
 
-      if (ImGui::Button("Load Scenario")) {
+      if (scenarioType == ScenarioType::Tsunami) {
+        ImGui::Text("Tsunami scenario requires bathymetry and displacement files.");
+        ImGui::Text("Enter paths or drag/drop files to the window.");
+
+        ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
+        ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
+      }
+
+      if (ImGui::Button("Load Scenario") || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
         m_scenarioType        = scenarioType;
         m_dimensions[0]       = n[0];
         m_dimensions[1]       = n[1];
@@ -330,6 +366,21 @@ namespace App {
         loadBlock();
       }
       ImGui::End();
+    }
+  }
+
+  void SweApp::dropFileCallback(GLFWwindow*, int count, const char** paths) {
+    SweApp& app = dynamic_cast<SweApp&>(*Core::Application::get());
+
+    for (int i = 0; i < count; i++) {
+      const char* path = paths[i];
+      if (std::string_view(path).ends_with(".nc")) {
+        if (std::string_view(path).find("bath") != std::string::npos) {
+          strncpy(app.m_bathymetryFile, path, sizeof(app.m_bathymetryFile));
+        } else if (std::string_view(path).find("displ") != std::string::npos) {
+          strncpy(app.m_displacementFile, path, sizeof(app.m_displacementFile));
+        }
+      }
     }
   }
 
