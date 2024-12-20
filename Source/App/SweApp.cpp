@@ -45,6 +45,9 @@ namespace App {
     if (m_block) {
       delete m_block;
     }
+    if (m_scenario) {
+      delete m_scenario;
+    }
     bgfx::destroy(m_program);
     bgfx::destroy(u_color);
     bgfx::destroy(u_util);
@@ -53,36 +56,40 @@ namespace App {
   static std::string scenarioTypeToString(ScenarioType type);
 
   void SweApp::loadBlock() {
-    Scenarios::Scenario* scenario = nullptr;
-    switch (m_currentScenario) {
+    if (m_scenario) {
+      delete m_scenario;
+    }
+
+    switch (m_scenarioType) {
     case ScenarioType::Test:
-      scenario = new Scenarios::TestScenario(m_currentDimensions[0]);
+      m_scenario = new Scenarios::TestScenario(m_dimensions[0]);
       break;
     case ScenarioType::ArtificialTsunami:
       // TODO: Implement maxSimulationTime and boundaryType selection
-      scenario = new Scenarios::ArtificialTsunamiScenario(100.0, BoundaryType::Wall);
+      m_scenario = new Scenarios::ArtificialTsunamiScenario(100.0, BoundaryType::Wall);
       break;
     case ScenarioType::Tsunami:
     // TODO
     default:
-      m_currentScenario      = ScenarioType::None;
-      m_currentDimensions[0] = 0;
-      m_currentDimensions[1] = 0;
-      m_block                = nullptr;
+      m_scenarioType  = ScenarioType::None;
+      m_dimensions[0] = 0;
+      m_dimensions[1] = 0;
+      m_block         = nullptr;
+      m_scenario      = nullptr;
       return;
     }
 
-    RealType left   = scenario->getBoundaryPos(BoundaryEdge::Left);
-    RealType right  = scenario->getBoundaryPos(BoundaryEdge::Right);
-    RealType bottom = scenario->getBoundaryPos(BoundaryEdge::Bottom);
-    RealType top    = scenario->getBoundaryPos(BoundaryEdge::Top);
+    RealType left   = m_scenario->getBoundaryPos(BoundaryEdge::Left);
+    RealType right  = m_scenario->getBoundaryPos(BoundaryEdge::Right);
+    RealType bottom = m_scenario->getBoundaryPos(BoundaryEdge::Bottom);
+    RealType top    = m_scenario->getBoundaryPos(BoundaryEdge::Top);
 
-    int      nx = m_currentDimensions[0];
-    int      ny = m_currentDimensions[1];
-    RealType dx = (right - left) / m_currentDimensions[0];
-    RealType dy = (top - bottom) / m_currentDimensions[1];
+    int      nx = m_dimensions[0];
+    int      ny = m_dimensions[1];
+    RealType dx = (right - left) / m_dimensions[0];
+    RealType dy = (top - bottom) / m_dimensions[1];
 
-    std::cout << "Loading block with scenario: " << scenarioTypeToString(m_currentScenario) << std::endl;
+    std::cout << "Loading block with scenario: " << scenarioTypeToString(m_scenarioType) << std::endl;
     std::cout << "  nx: " << nx << ", ny: " << ny << std::endl;
     std::cout << "  dx: " << dx << ", dy: " << dy << std::endl;
     std::cout << "  Left: " << left << ", Right: " << right << ", Bottom: " << bottom << ", Top: " << top << std::endl;
@@ -91,19 +98,18 @@ namespace App {
       delete m_block;
     }
     m_block = new Blocks::DimensionalSplittingBlock(nx, ny, dx, dy);
-    m_block->initialiseScenario(left, bottom, *scenario);
+    m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
-    delete scenario;
 
-    // TODO: Do min/max = -0.1/0.1 later when using h+b
-    const RealType* h             = m_block->getWaterHeight().getData();
+    const RealType* h = m_block->getWaterHeight().getData(); // TODO: Try h+b
+
     auto [min, max]               = std::minmax_element(h, h + (m_block->getNx() + 2) * (m_block->getNy() + 2));
-    m_util[UtilIndex::hMin]       = (float)*min;
-    m_util[UtilIndex::hMax]       = (float)*max;
+    m_util[UtilIndex::hMin]       = (float)*min - 0.1f;
+    m_util[UtilIndex::hMax]       = (float)*max + 0.1f;
     m_util[UtilIndex::heightExag] = 1.0f;
 
-    m_cameraClipping[0] = (float)*min - 1.0f;
-    m_cameraClipping[1] = (float)*max + 1.0f;
+    m_cameraClipping[0] = (float)*min - 10.0f;
+    m_cameraClipping[1] = (float)*max + 10.0f;
   }
 
   void SweApp::update() {
@@ -111,8 +117,19 @@ namespace App {
 
     updateTransform();
 
-    // TODO: Run simulation
+    if (m_playing) {
+      m_block->setGhostLayer();
 
+      m_block->computeMaxTimeStep();
+      RealType dt = m_block->getMaxTimeStep();
+      m_block->simulateTimeStep(dt);
+
+      // m_block->computeNumericalFluxes();
+      // RealType dt = m_block->getMaxTimeStep();
+      // m_block->updateUnknowns(dt);
+
+      m_simulationTime += dt;
+    }
     submitHeightGrid();
 
     bgfx::frame();
@@ -152,8 +169,8 @@ namespace App {
 
     // TODO: Only do all this if old code would've written to file
 
-    int   nx      = m_block->getNx();
-    int   ny      = m_block->getNy();
+    int   nx      = m_dimensions[0];
+    int   ny      = m_dimensions[1];
     float dx      = (float)m_block->getDx();
     float dy      = (float)m_block->getDy();
     float originX = (float)m_block->getOffsetX();
@@ -221,23 +238,37 @@ namespace App {
       scenarioSelectionOpen = true;
     }
     ImGui::SameLine();
-    ImGui::Text("Current Scenario: %s (%dx%d)", scenarioTypeToString(m_currentScenario).c_str(), m_currentDimensions[0], m_currentDimensions[1]);
-    if (ImGui::Button("Start Simulation")) {
-      // TODO
+    ImGui::Text("Current Scenario: %s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
+    if (ImGui::Button("Reset")) {
+      if (m_block) {
+        m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
+        m_simulationTime = 0.0;
+        m_playing        = false;
+      }
     }
     ImGui::SameLine();
-    ImGui::Text("Simulation time: %.2f", m_simulationTime);
+    if (ImGui::Button(!m_playing ? "Start" : "Stop")) {
+      if (m_block) {
+        m_playing = !m_playing;
+      }
+    }
+    ImGui::SameLine();
+    ImGui::Text("Simulation time: %.2f seconds", m_simulationTime);
 
     ImGui::Separator();
 
     ImGui::Text("Visualization:");
     ImGui::ColorEdit4("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha); // TODO: Alpha
-    ImGui::DragFloat2("H Min/Max", &m_util[UtilIndex::hMin], 0.1f);
-    ImGui::DragFloat2("Near/Far Clip", &m_cameraClipping[0]);
+    if (ImGui::DragFloat2("H Min/Max", &m_util[UtilIndex::hMin], 0.01f)) {
+      m_util[UtilIndex::hMax] = std::max(m_util[UtilIndex::hMin], m_util[UtilIndex::hMax]);
+    }
+    if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
+      m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
+    }
     ImGui::DragFloat("Height Exaggeration", &m_util[UtilIndex::heightExag], 0.01f, 0.0f, 100.0f);
 
     static float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
-    if (ImGui::ColorEdit4("Background Color", clearColor)) {
+    if (ImGui::ColorEdit3("Background Color", clearColor)) {
       uint32_t color = 0;
       for (int i = 0; i < 4; i++) {
         color |= (uint32_t)(clearColor[i] * 255) << ((3 - i) * 8);
@@ -273,7 +304,7 @@ namespace App {
         n[1] = std::clamp(n[1], 2, 100);
       }
 
-      static ScenarioType scenarioType = m_currentScenario;
+      static ScenarioType scenarioType = m_scenarioType;
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
           ScenarioType type       = (ScenarioType)i;
@@ -289,11 +320,12 @@ namespace App {
       }
 
       if (ImGui::Button("Load Scenario")) {
-        m_currentScenario      = scenarioType;
-        m_currentDimensions[0] = n[0];
-        m_currentDimensions[1] = n[1];
-        m_simulationTime       = 0.0;
-        scenarioSelectionOpen  = false;
+        m_scenarioType        = scenarioType;
+        m_dimensions[0]       = n[0];
+        m_dimensions[1]       = n[1];
+        m_simulationTime      = 0.0;
+        m_playing             = false;
+        scenarioSelectionOpen = false;
 
         loadBlock();
       }

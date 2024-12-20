@@ -38,11 +38,13 @@ namespace App {
     float m_cameraClipping[2] = {0.0f, 10000.0f};
 
   private:
-    Blocks::Block* m_block = nullptr;
+    Blocks::Block*       m_block    = nullptr;
+    Scenarios::Scenario* m_scenario = nullptr;
 
-    ScenarioType m_currentScenario = ScenarioType::None;
-    int          m_currentDimensions[2]{};
+    ScenarioType m_scenarioType = ScenarioType::None;
+    int          m_dimensions[2]{};
 
+    bool   m_playing        = false;
     double m_simulationTime = 0.0;
   };
 
