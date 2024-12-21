@@ -119,11 +119,16 @@ namespace Core {
     while (!glfwWindowShouldClose(m_window)) {
       glfwPollEvents();
 
+      static double lastTime = glfwGetTime();
+      double        now      = glfwGetTime();
+      double        dt       = now - lastTime;
+      lastTime               = now;
+
       ImGuiBgfx::beginImGuiFrame();
-      updateImGui();
+      updateImGui(dt);
       ImGuiBgfx::endImGuiFrame();
 
-      update();
+      update(dt);
     }
 #endif
   }

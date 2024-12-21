@@ -27,8 +27,8 @@ namespace App {
 
     ~SweApp() override;
 
-    void update() override;
-    void updateImGui() override;
+    void update(float dt) override;
+    void updateImGui(float dt) override;
 
   private:
     void loadBlock();
@@ -50,6 +50,8 @@ namespace App {
     float m_color[4]          = {1.0f, 1.0f, 1.0f, 1.0f};
     float m_cameraClipping[2] = {0.0f, 10000.0f};
 
+    float m_clearColor[4] = {0.32f, 0.34f, 0.43f, 1.0f};
+
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
 
@@ -63,6 +65,8 @@ namespace App {
 
     bool   m_playing        = false;
     double m_simulationTime = 0.0;
+
+    float m_timeScale = 60.0f;
   };
 
 } // namespace App

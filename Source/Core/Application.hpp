@@ -18,8 +18,8 @@ namespace Core {
 
     virtual ~Application();
 
-    virtual void update()      = 0;
-    virtual void updateImGui() = 0;
+    virtual void update(float dt)      = 0;
+    virtual void updateImGui(float dt) = 0;
 
   public:
     static Application* get() { return s_app; }
