@@ -30,10 +30,12 @@ namespace App {
     void update() override;
     void updateImGui() override;
 
+  private:
+    void loadBlock();
+    void rescaleToDataRange();
+
     void updateTransform();
     void submitMesh();
-
-    void loadBlock();
 
   private:
     static void dropFileCallback(GLFWwindow* window, int count, const char** paths);
@@ -48,15 +50,16 @@ namespace App {
     float m_color[4]          = {1.0f, 1.0f, 1.0f, 1.0f};
     float m_cameraClipping[2] = {0.0f, 10000.0f};
 
-  private:
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
 
     ScenarioType m_scenarioType = ScenarioType::None;
     int          m_dimensions[2]{};
 
+#ifndef __EMSCRIPTEN__
     char m_bathymetryFile[128]{};
     char m_displacementFile[128]{};
+#endif
 
     bool   m_playing        = false;
     double m_simulationTime = 0.0;

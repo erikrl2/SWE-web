@@ -27,7 +27,7 @@ namespace App {
   void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end(); };
 
   // Has to match order in shader
-  enum UtilIndex { hMin, hMax, heightExag };
+  enum UtilIndex { Min, Max, HeightExag };
 
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
@@ -116,15 +116,21 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
+    m_util[UtilIndex::HeightExag] = 1.0f;
+    rescaleToDataRange();
+  }
+
+  void SweApp::rescaleToDataRange() {
+    if (!m_block)
+      return;
+
     const RealType* h = m_block->getWaterHeight().getData(); // TODO: Try h, hu, hv, b, h+b
 
-    auto [min, max]               = std::minmax_element(h, h + (m_block->getNx() + 2) * (m_block->getNy() + 2));
-    m_util[UtilIndex::hMin]       = (float)*min - 0.1f;
-    m_util[UtilIndex::hMax]       = (float)*max + 0.1f;
-    m_util[UtilIndex::heightExag] = 1.0f;
-
-    m_cameraClipping[0] = (float)*min - 10.0f;
-    m_cameraClipping[1] = (float)*max + 10.0f;
+    auto [min, max]               = std::minmax_element(h, h + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
+    m_util[UtilIndex::Min]        = (float)*min - 0.01f;
+    m_util[UtilIndex::Max]        = (float)*max + 0.01f;
+    m_cameraClipping[0]           = (float)*min * m_util[UtilIndex::HeightExag] - 10.0f;
+    m_cameraClipping[1]           = (float)*max * m_util[UtilIndex::HeightExag] + 10.0f;
   }
 
   void SweApp::update() {
@@ -252,14 +258,15 @@ namespace App {
     static bool scenarioSelectionOpen = false;
 
     // ImGui::SetNextWindowPos(ImVec2(20, m_windowHeight - 320), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
 
-    ImGui::Text("Simulation:");
+    ImGui::SeparatorText("Simulation");
+
     if (ImGui::Button("Select Scenario") || ImGui::IsKeyPressed(ImGuiKey_S)) {
       scenarioSelectionOpen = true;
     }
     ImGui::SameLine();
-    ImGui::Text("Current Scenario: %s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
+    ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
     if (ImGui::Button("Reset") || ImGui::IsKeyPressed(ImGuiKey_R)) {
       if (m_block) {
         m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
@@ -276,17 +283,20 @@ namespace App {
     ImGui::SameLine();
     ImGui::Text("Simulation time: %.2f seconds", m_simulationTime);
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Visualization");
 
-    ImGui::Text("Visualization:");
     ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
-    if (ImGui::DragFloat2("H Min/Max", &m_util[UtilIndex::hMin], 0.01f)) {
-      m_util[UtilIndex::hMax] = std::max(m_util[UtilIndex::hMin], m_util[UtilIndex::hMax]);
+    if (ImGui::DragFloat2("Data Range", &m_util[UtilIndex::Min], 0.01f)) {
+      m_util[UtilIndex::Max] = std::max(m_util[UtilIndex::Min], m_util[UtilIndex::Max]);
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Auto Scale")) {
+      rescaleToDataRange();
     }
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
-    ImGui::DragFloat("Height Exaggeration", &m_util[UtilIndex::heightExag], 0.01f, 0.0f, 100.0f);
+    ImGui::DragFloat("Height Exaggeration", &m_util[UtilIndex::HeightExag], 0.01f, 0.0f, 100.0f);
 
     static float clearColor[4] = {0.0f, 0.0f, 0.0f, 1.0f};
     if (ImGui::ColorEdit3("Background Color", clearColor)) {
@@ -297,9 +307,8 @@ namespace App {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, color);
     }
 
-    ImGui::Separator();
+    ImGui::SeparatorText("Debug Options");
 
-    ImGui::Text("Debug options (toggle):");
     static int debugFlags = BGFX_DEBUG_NONE;
     if (ImGui::Button("Show stats"))
       debugFlags ^= BGFX_DEBUG_STATS;
@@ -308,11 +317,11 @@ namespace App {
       debugFlags ^= BGFX_DEBUG_WIREFRAME;
     bgfx::setDebug(debugFlags);
 
-    ImGui::Separator();
-
+    ImGui::SameLine(ImGui::GetWindowSize().x - 75);
     if (ImGui::Button("Exit")) {
       glfwSetWindowShouldClose(m_window, 1);
     }
+
     ImGui::SameLine(ImGui::GetWindowSize().x - 30);
     ImGui::TextDisabled("(?)");
     const char* helpText = "Press 'S' to open scenario selection.\n"
@@ -326,8 +335,8 @@ namespace App {
     ImGui::End(); // Controls
 
     if (scenarioSelectionOpen) {
-      ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
-      ImGui::Begin("Scenario Selection", &scenarioSelectionOpen, ImGuiWindowFlags_AlwaysAutoResize);
+      // ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
+      ImGui::Begin("Scenario Selection", &scenarioSelectionOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
 
       if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
         scenarioSelectionOpen = false;
@@ -349,15 +358,18 @@ namespace App {
         }
         ImGui::EndCombo();
       }
-      if (ImGui::InputInt2("Grid Dimensions [2,100]", n)) {
-        n[0] = std::clamp(n[0], 2, 100);
-        n[1] = std::clamp(n[1], 2, 100);
+      if (ImGui::InputInt2("Grid Dimensions (max 200)", n)) {
+        n[0] = std::clamp(n[0], 2, 200);
+        n[1] = std::clamp(n[1], 2, 200);
       }
 
 #ifndef __EMSCRIPTEN__
       if (scenarioType == ScenarioType::Tsunami) {
         ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
+        ImGui::SameLine();
+        ImGui::TextDisabled("(?)");
+        ImGui::SetItemTooltip("File name should contain 'bath' or 'displ' to be recognized.");
 
         ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
         ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
@@ -380,18 +392,26 @@ namespace App {
   }
 
   void SweApp::dropFileCallback(GLFWwindow*, int count, const char** paths) {
+#ifndef __EMSCRIPTEN__
     SweApp& app = dynamic_cast<SweApp&>(*Core::Application::get());
-
     for (int i = 0; i < count; i++) {
       const char* path = paths[i];
       if (std::string_view(path).ends_with(".nc")) {
+        auto rfind = std::string_view(path).rfind('/');
+        if (rfind == std::string::npos) {
+          rfind = std::string_view(path).rfind('\\'); // Windows
+        }
+        if (rfind != std::string::npos) {
+          path += rfind + 1;
+        }
         if (std::string_view(path).find("bath") != std::string::npos) {
-          strncpy(app.m_bathymetryFile, path, sizeof(app.m_bathymetryFile));
+          strncpy(app.m_bathymetryFile, paths[i], sizeof(app.m_bathymetryFile));
         } else if (std::string_view(path).find("displ") != std::string::npos) {
-          strncpy(app.m_displacementFile, path, sizeof(app.m_displacementFile));
+          strncpy(app.m_displacementFile, paths[i], sizeof(app.m_displacementFile));
         }
       }
     }
+#endif
   }
 
   static std::string scenarioTypeToString(ScenarioType type) {
