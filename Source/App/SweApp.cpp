@@ -63,7 +63,7 @@ namespace App {
   }
 
   void SweApp::update(float dt) {
-    bgfx::touch(0); // So window is cleared if nothing is submitted
+    bgfx::touch(0); // clears window if nothing is submitted
 
     updateTransform();
 
@@ -72,7 +72,7 @@ namespace App {
 
       RealType scaleFactor = RealType(std::min(dt * m_timeScale, 1.0f));
 
-#if 1 // First option needs more computation but is more stable for non-square cells
+#if 1 // First option needs more computation but is more stable for grids with non-square cells
       m_block->computeMaxTimeStep();
       RealType maxTimeStep = m_block->getMaxTimeStep();
       maxTimeStep *= scaleFactor;
@@ -154,13 +154,22 @@ namespace App {
 
     ImGui::SeparatorText("Debug Options");
 
-    static int debugFlags = BGFX_DEBUG_NONE;
-    if (ImGui::Button("Show stats"))
+    static bool stats = false;
+    if (ImGui::Checkbox("Stats", &stats)) {
+      static int debugFlags = BGFX_DEBUG_NONE;
       debugFlags ^= BGFX_DEBUG_STATS;
+      bgfx::setDebug(debugFlags);
+    }
     ImGui::SameLine();
-    if (ImGui::Button("Wireframe"))
-      debugFlags ^= BGFX_DEBUG_WIREFRAME;
-    bgfx::setDebug(debugFlags);
+    static bool wireframe = false;
+    if (ImGui::Checkbox("Lines", &wireframe)) {
+      m_stateFlags ^= BGFX_STATE_PT_LINES;
+    }
+    ImGui::SameLine();
+    static bool points = false;
+    if (ImGui::Checkbox("Points", &points)) {
+      m_stateFlags ^= BGFX_STATE_PT_POINTS;
+    }
 
     ImGui::SameLine(0.0f, 40.0f);
     ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
@@ -385,6 +394,9 @@ namespace App {
     if (m_viewType == ViewType::HPlusB) {
       const auto& h = m_block->getWaterHeight();
       const auto& b = m_block->getBathymetry();
+// #ifdef ENABLE_OPENMP
+// #pragma omp parallel for schedule(static)
+// #endif
       for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
           vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(h[j + 1][i + 1] + b[j + 1][i + 1])};
@@ -401,6 +413,9 @@ namespace App {
       } else if (m_viewType == ViewType::B) {
         values = &m_block->getBathymetry();
       }
+// #ifdef ENABLE_OPENMP
+// #pragma omp parallel for schedule(static)
+// #endif
       for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
           vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(*values)[j + 1][i + 1]};
@@ -412,6 +427,10 @@ namespace App {
     int         c            = 0;
     const auto* verticesBase = vertices.getData();
 
+    // TODO: Adjust loop so c is calculated and not incremented
+// #ifdef ENABLE_OPENMP
+// #pragma omp parallel for schedule(static)
+// #endif
     for (int j = 0; j < ny - 1; j++) {
       for (int i = 0; i < nx - 1; i++) {
         int topLeft     = &vertices[j][i] - verticesBase;
@@ -434,7 +453,7 @@ namespace App {
     bgfx::setUniform(u_color, m_color);
     bgfx::setUniform(u_util, m_util);
 
-    bgfx::setState(BGFX_STATE_DEFAULT);
+    bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);
   }
 

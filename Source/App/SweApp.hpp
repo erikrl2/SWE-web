@@ -71,6 +71,8 @@ namespace App {
     double m_simulationTime = 0.0;
 
     float m_timeScale = 60.0f;
+
+    uint64_t m_stateFlags = BGFX_STATE_DEFAULT;
   };
 
 } // namespace App
