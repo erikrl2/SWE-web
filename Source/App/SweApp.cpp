@@ -174,10 +174,12 @@ namespace App {
     ImGui::SameLine(0.0f, 40.0f);
     ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
 
+#ifndef __EMSCRIPTEN__
     ImGui::SameLine(ImGui::GetWindowSize().x - 75);
     if (ImGui::Button("Exit")) {
       glfwSetWindowShouldClose(m_window, 1);
     }
+#endif
 
     ImGui::SameLine(ImGui::GetWindowSize().x - 30);
     ImGui::TextDisabled("(?)");

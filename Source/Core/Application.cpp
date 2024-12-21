@@ -104,11 +104,16 @@ namespace Core {
       windowSizeCallback(s_app->m_window, width, height);
     }
 
+    static double lastTime = glfwGetTime();
+    double        now      = glfwGetTime();
+    double        dt       = now - lastTime;
+    lastTime               = now;
+
     ImGuiBgfx::beginImGuiFrame();
-    s_app->updateImGui();
+    s_app->updateImGui(dt);
     ImGuiBgfx::endImGuiFrame();
 
-    s_app->update();
+    s_app->update(dt);
   }
 #endif
 
