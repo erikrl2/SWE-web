@@ -27,10 +27,11 @@ namespace App {
   void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end(); };
 
   static std::string scenarioTypeToString(ScenarioType type);
+  static std::string viewTypeToString(ViewType type);
   static uint32_t    colorToInt(float* color4);
 
   // Has to match order in shader
-  enum UtilIndex { Min, Max, HeightExag };
+  enum UtilIndex { Min, Max, ValueScale };
 
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
@@ -118,11 +119,19 @@ namespace App {
       }
     }
     ImGui::SameLine();
-    ImGui::Text("Simulation time: %.2f seconds", m_simulationTime);
-
+    ImGui::Text("Time: %.1f s", m_simulationTime);
     ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt);
 
-    // TODO: Value type selection
+    if (ImGui::BeginCombo("View Type", viewTypeToString(m_viewType).c_str())) {
+      for (int i = 0; i < (int)ViewType::Count; i++) {
+        ViewType type = (ViewType)i;
+        if (ImGui::Selectable(viewTypeToString(type).c_str(), m_viewType == type)) {
+          m_viewType = type;
+          rescaleToDataRange();
+        }
+      }
+      ImGui::EndCombo();
+    }
 
     ImGui::SeparatorText("Visualization");
 
@@ -137,7 +146,7 @@ namespace App {
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
-    ImGui::DragFloat("Height Exaggeration", &m_util[UtilIndex::HeightExag], 0.01f, 0.0f, 100.0f);
+    ImGui::DragFloat("Value Scale", &m_util[UtilIndex::ValueScale], 0.01f, 0.0f, 100.0f);
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
@@ -152,6 +161,9 @@ namespace App {
     if (ImGui::Button("Wireframe"))
       debugFlags ^= BGFX_DEBUG_WIREFRAME;
     bgfx::setDebug(debugFlags);
+
+    ImGui::SameLine(0.0f, 40.0f);
+    ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
 
     ImGui::SameLine(ImGui::GetWindowSize().x - 75);
     if (ImGui::Button("Exit")) {
@@ -183,13 +195,9 @@ namespace App {
 
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
-          ScenarioType type       = (ScenarioType)i;
-          bool         isSelected = scenarioType == type;
-          if (ImGui::Selectable(scenarioTypeToString(type).c_str(), isSelected)) {
+          ScenarioType type = (ScenarioType)i;
+          if (ImGui::Selectable(scenarioTypeToString(type).c_str(), scenarioType == type)) {
             scenarioType = type;
-          }
-          if (isSelected) {
-            ImGui::SetItemDefaultFocus();
           }
         }
         ImGui::EndCombo();
@@ -260,7 +268,7 @@ namespace App {
       m_scenario      = nullptr;
       return;
     default:
-      assert(false); // Shouldn't happen
+      assert(false);
     }
 
     RealType left   = m_scenario->getBoundaryPos(BoundaryEdge::Left);
@@ -285,7 +293,7 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    m_util[UtilIndex::HeightExag] = 1.0f;
+    m_util[UtilIndex::ValueScale] = 1.0f;
     rescaleToDataRange();
   }
 
@@ -293,13 +301,35 @@ namespace App {
     if (!m_block)
       return;
 
-    const RealType* h = m_block->getWaterHeight().getData(); // TODO: Try h, hu, hv, b, h+b
+    const RealType* values = nullptr;
 
-    auto [min, max]        = std::minmax_element(h, h + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
+    if (m_viewType == ViewType::H) {
+      values = m_block->getWaterHeight().getData();
+    } else if (m_viewType == ViewType::Hu) {
+      values = m_block->getDischargeHu().getData();
+    } else if (m_viewType == ViewType::Hv) {
+      values = m_block->getDischargeHv().getData();
+    } else if (m_viewType == ViewType::B) {
+      values = m_block->getBathymetry().getData();
+    } else if (m_viewType == ViewType::HPlusB) {
+      const int size  = (m_dimensions[0] + 2) * (m_dimensions[1] + 2);
+      RealType* hCopy = new RealType[size];
+      memcpy(hCopy, m_block->getWaterHeight().getData(), size * sizeof(RealType));
+      const RealType* b = m_block->getBathymetry().getData();
+      for (int i = 0; i < size; i++) {
+        hCopy[i] += b[i];
+      }
+      values = hCopy;
+    }
+
+    auto [min, max]        = std::minmax_element(values, values + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
     m_util[UtilIndex::Min] = (float)*min - 0.01f;
     m_util[UtilIndex::Max] = (float)*max + 0.01f;
-    m_cameraClipping[0]    = (float)*min * m_util[UtilIndex::HeightExag] - 10.0f;
-    m_cameraClipping[1]    = (float)*max * m_util[UtilIndex::HeightExag] + 10.0f;
+    m_cameraClipping[0]    = (float)*min * m_util[UtilIndex::ValueScale] - 10.0f;
+    m_cameraClipping[1]    = (float)*max * m_util[UtilIndex::ValueScale] + 10.0f;
+
+    if (m_viewType == ViewType::HPlusB)
+      delete values;
   }
 
   void SweApp::updateTransform() {
@@ -352,19 +382,29 @@ namespace App {
 
     Float2D<CellVertex> vertices(ny, nx, (CellVertex*)tvb.data);
 
-    // TODO: User selection between h, hu, hv, b, h+b
-    const auto& heights = m_block->getWaterHeight();
-    // const auto& bathymetry = m_block->getBathymetry();
-
-    for (int j = 1; j <= ny; j++) {
-      for (int i = 1; i <= nx; i++) {
-        float x = originX + (i - 0.5f) * dx;
-        float y = originY + (j - 0.5f) * dy;
-        float h = (float)heights[j][i];
-        // float b = (float)bathymetry[j][i];
-
-        vertices[j - 1][i - 1] = {x, y, h};
-        // vertices[j - 1][i - 1] = {x, y, h + b};
+    if (m_viewType == ViewType::HPlusB) {
+      const auto& h = m_block->getWaterHeight();
+      const auto& b = m_block->getBathymetry();
+      for (int j = 0; j < ny; j++) {
+        for (int i = 0; i < nx; i++) {
+          vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(h[j + 1][i + 1] + b[j + 1][i + 1])};
+        }
+      }
+    } else {
+      const Float2D<RealType>* values = nullptr;
+      if (m_viewType == ViewType::H) {
+        values = &m_block->getWaterHeight();
+      } else if (m_viewType == ViewType::Hu) {
+        values = &m_block->getDischargeHu();
+      } else if (m_viewType == ViewType::Hv) {
+        values = &m_block->getDischargeHv();
+      } else if (m_viewType == ViewType::B) {
+        values = &m_block->getBathymetry();
+      }
+      for (int j = 0; j < ny; j++) {
+        for (int i = 0; i < nx; i++) {
+          vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(*values)[j + 1][i + 1]};
+        }
       }
     }
 
@@ -435,6 +475,24 @@ namespace App {
       return "Test";
     case ScenarioType::None:
       return "None";
+    default:
+      assert(false);
+    }
+    return {};
+  }
+
+  static std::string viewTypeToString(ViewType type) {
+    switch (type) {
+    case ViewType::H:
+      return "Water Height";
+    case ViewType::Hu:
+      return "Water Momentum X";
+    case ViewType::Hv:
+      return "Water Momentum Y";
+    case ViewType::B:
+      return "Bathymetry";
+    case ViewType::HPlusB:
+      return "Water Height + Bathymetry";
     default:
       assert(false);
     }

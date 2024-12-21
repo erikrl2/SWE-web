@@ -21,6 +21,8 @@ namespace App {
     Count
   };
 
+  enum class ViewType { H, Hu, Hv, B, HPlusB, Count };
+
   class SweApp: public Core::Application {
   public:
     SweApp();
@@ -57,6 +59,8 @@ namespace App {
 
     ScenarioType m_scenarioType = ScenarioType::None;
     int          m_dimensions[2]{};
+
+    ViewType m_viewType = ViewType::H;
 
 #ifndef __EMSCRIPTEN__
     char m_bathymetryFile[128]{};
