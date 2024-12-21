@@ -71,21 +71,18 @@ namespace App {
       // TODO: Implement BoundaryType selection
       m_scenario = new Scenarios::ArtificialTsunamiScenario(0, BoundaryType::Wall);
       break;
+#ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami: {
-#ifdef __EMSCRIPTEN__
-      std::cout << "Tsunami scenario not implemented in Emscripten" << std::endl;
-#else
       const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, 0, BoundaryType::Outflow, m_dimensions[0], m_dimensions[1]);
       if (s->success()) {
         m_scenario = s;
         break;
-      } else {
-        std::cerr << "Failed to load Tsunami scenario" << std::endl;
-        delete s;
       }
-#endif
+      std::cerr << "Failed to load Tsunami scenario" << std::endl;
+      delete s;
       [[fallthrough]];
     }
+#endif
     case ScenarioType::None:
       m_scenarioType  = ScenarioType::None;
       m_dimensions[0] = 0;
@@ -161,29 +158,27 @@ namespace App {
     if (m_windowWidth == 0 || m_windowHeight == 0)
       return;
 
-    // TODO: Try out perspective projection and 3d camera
+    // TODO: Option to switch to perspective
+
+    float domainWidth  = m_dimensions[0] * m_block->getDx();
+    float domainHeight = m_dimensions[1] * m_block->getDy();
 
     float left   = (float)m_block->getOffsetX();
-    float right  = left + (float)m_block->getDx() * m_dimensions[0];
+    float right  = left + domainWidth;
     float bottom = (float)m_block->getOffsetY();
-    float top    = bottom + (float)m_block->getDy() * m_dimensions[1];
+    float top    = bottom + domainHeight;
 
-    // TODO: Fix issue with aspect ratio
-    // The domains aspect ration needs to be combined with aspect ratio of the window
+    float aspect = (float)m_windowWidth / (float)m_windowHeight;
 
-    // int domainWidth  = m_dimensions[0] * m_block->getDx();
-    // int domainHeight = m_dimensions[1] * m_block->getDy();
-
-    // float aspectDomain = (float)domainWidth / (float)domainHeight;
-    // float aspectWindow = (float)m_windowWidth / (float)m_windowHeight;
-
-    // if (aspect > 1.0f) {
-    //   left *= aspect;
-    //   right *= aspect;
-    // } else {
-    //   bottom /= aspect;
-    //   top /= aspect;
-    // }
+    if (aspect > domainWidth / domainHeight) {
+      float width = domainHeight * aspect;
+      left += (domainWidth - width) / 2.0f;
+      right = left + width;
+    } else {
+      float height = domainWidth / aspect;
+      bottom += (domainHeight - height) / 2.0f;
+      top = bottom + height;
+    }
 
     float proj[16];
     bx::mtxOrtho(proj, left, right, bottom, top, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
@@ -260,12 +255,12 @@ namespace App {
     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize);
 
     ImGui::Text("Simulation:");
-    if (ImGui::Button("Select Scenario")) {
+    if (ImGui::Button("Select Scenario") || ImGui::IsKeyPressed(ImGuiKey_S)) {
       scenarioSelectionOpen = true;
     }
     ImGui::SameLine();
     ImGui::Text("Current Scenario: %s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
-    if (ImGui::Button("Reset")) {
+    if (ImGui::Button("Reset") || ImGui::IsKeyPressed(ImGuiKey_R)) {
       if (m_block) {
         m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
         m_simulationTime = 0.0;
@@ -273,7 +268,7 @@ namespace App {
       }
     }
     ImGui::SameLine();
-    if (ImGui::Button(!m_playing ? "Start" : "Stop")) {
+    if (ImGui::Button(!m_playing ? "Start" : "Stop") || ImGui::IsKeyPressed(ImGuiKey_Space)) {
       if (m_block) {
         m_playing = !m_playing;
       }
@@ -284,7 +279,7 @@ namespace App {
     ImGui::Separator();
 
     ImGui::Text("Visualization:");
-    ImGui::ColorEdit4("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha); // TODO: Alpha
+    ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
     if (ImGui::DragFloat2("H Min/Max", &m_util[UtilIndex::hMin], 0.01f)) {
       m_util[UtilIndex::hMax] = std::max(m_util[UtilIndex::hMin], m_util[UtilIndex::hMax]);
     }
@@ -318,21 +313,29 @@ namespace App {
     if (ImGui::Button("Exit")) {
       glfwSetWindowShouldClose(m_window, 1);
     }
-    ImGui::End();
+    ImGui::SameLine(ImGui::GetWindowSize().x - 30);
+    ImGui::TextDisabled("(?)");
+    const char* helpText = "Press 'S' to open scenario selection.\n"
+                           "Press 'Enter' to load scenario.\n"
+                           "Press 'Esc' to close scenario selection.\n"
+                           "Press 'Space' to start/stop simulation.\n"
+                           "Press 'R' to reset simulation.\n"
+                           "Drag and drop NetCDF files to set paths for Tsunami scenario.";
+    ImGui::SetItemTooltip("%s", helpText);
+
+    ImGui::End(); // Controls
 
     if (scenarioSelectionOpen) {
-      ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 194, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
+      ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
       ImGui::Begin("Scenario Selection", &scenarioSelectionOpen, ImGuiWindowFlags_AlwaysAutoResize);
 
-      ImGui::Text("Hint: Tsunami Scenario is Desktop only");
-
-      static int          n[2]         = {2, 2};
-      static ScenarioType scenarioType = m_scenarioType;
-
-      if (ImGui::InputInt2("Grid Dimensions (1-100)", n)) {
-        n[0] = std::clamp(n[0], 2, 100);
-        n[1] = std::clamp(n[1], 2, 100);
+      if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        scenarioSelectionOpen = false;
       }
+
+      static int          n[2]         = {20, 20};
+      static ScenarioType scenarioType = ScenarioType::ArtificialTsunami;
+
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
           ScenarioType type       = (ScenarioType)i;
@@ -346,16 +349,22 @@ namespace App {
         }
         ImGui::EndCombo();
       }
+      if (ImGui::InputInt2("Grid Dimensions [2,100]", n)) {
+        n[0] = std::clamp(n[0], 2, 100);
+        n[1] = std::clamp(n[1], 2, 100);
+      }
 
+#ifndef __EMSCRIPTEN__
       if (scenarioType == ScenarioType::Tsunami) {
-        ImGui::Text("Tsunami scenario requires bathymetry and displacement files.");
+        ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
 
         ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
         ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
       }
+#endif
 
-      if (ImGui::Button("Load Scenario") || ImGui::IsKeyPressed(ImGuiKey_Enter)) {
+      if (ImGui::Button("Load Scenario") || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))) {
         m_scenarioType        = scenarioType;
         m_dimensions[0]       = n[0];
         m_dimensions[1]       = n[1];
@@ -365,7 +374,8 @@ namespace App {
 
         loadBlock();
       }
-      ImGui::End();
+
+      ImGui::End(); // Scenario Selection
     }
   }
 
@@ -386,8 +396,10 @@ namespace App {
 
   static std::string scenarioTypeToString(ScenarioType type) {
     switch (type) {
+#ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami:
       return "Tsunami";
+#endif
     case ScenarioType::ArtificialTsunami:
       return "Artificial Tsunami";
     case ScenarioType::Test:

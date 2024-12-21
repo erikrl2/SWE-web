@@ -11,7 +11,15 @@ namespace App {
     static void               init();
   };
 
-  enum class ScenarioType { None, Test, ArtificialTsunami, Tsunami, Count };
+  enum class ScenarioType {
+    None,
+#ifndef __EMSCRIPTEN__
+    Tsunami, // Requires NetCDF which isn't available with Emscripten
+#endif
+    ArtificialTsunami,
+    Test,
+    Count
+  };
 
   class SweApp: public Core::Application {
   public:
