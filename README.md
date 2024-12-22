@@ -11,10 +11,11 @@ Just use `cmake` and `make` as usual. Platform is detected automatically.
 Follow instructions [here](https://github.com/emscripten-core/emsdk) to install
 and activate emsdk. Source `emsdk_env.sh` to set up the environment.
 
-To build an run this project
+To build an run this project:
 
 ``` sh
 cd swe-web
+mkdir Build && cd Build
 emcmake cmake ..
 emmake make SWE-App
 emrun SWE-App.html
