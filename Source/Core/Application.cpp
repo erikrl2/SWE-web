@@ -50,14 +50,24 @@ namespace Core {
 
     bgfx::Init bgfxInit;
 
-#if BX_PLATFORM_LINUX || BX_PLATFORM_BSD
-    bgfxInit.platformData.nwh = (void*)glfwGetX11Window(m_window);
+#if BX_PLATFORM_LINUX
+    bgfxInit.platformData.nwh = (void*)uintptr_t(glfwGetX11Window(m_window));
+    bgfxInit.platformData.ndt = glfwGetX11Display();
+    bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
 #elif BX_PLATFORM_OSX
-    bgfxInit.platformData.nwh = (void*)glfwGetCocoaWindow(window);
+    bgfxInit.platformData.nwh = glfwGetCocoaWindow(m_window);
+    bgfxInit.platformData.ndt = NULL;
+    bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
 #elif BX_PLATFORM_WINDOWS
-    bgfxInit.platformData.nwh = (void*)glfwGetWin32Window(window);
+    bgfxInit.platformData.nwh = glfwGetWin32Window(m_window);
+    bgfxInit.platformData.ndt = NULL;
+    bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
+    bgfxInit.type = bgfx::RendererType::OpenGL;
 #elif __EMSCRIPTEN__
     bgfxInit.platformData.nwh = (void*)"#canvas";
+    bgfxInit.type = bgfx::RendererType::OpenGLES;
 #endif
 
     glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
