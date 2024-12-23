@@ -73,6 +73,8 @@ namespace App {
     float m_timeScale = 60.0f;
 
     uint64_t m_stateFlags = BGFX_STATE_DEFAULT;
+    uint32_t m_resetFlags = BGFX_RESET_VSYNC;
+    uint32_t m_debugFlags = BGFX_DEBUG_NONE;
   };
 
 } // namespace App

@@ -4,6 +4,8 @@
 #include <cmath>
 #include <stdexcept>
 
+extern int g_useOpenMP;
+
 namespace Blocks {
 
   DimensionalSplittingBlock::DimensionalSplittingBlock(int nx, int ny, RealType dx, RealType dy):
@@ -20,7 +22,7 @@ namespace Blocks {
 
 // Loop over all vertical edges
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) if (g_useOpenMP)
 #endif
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 2; x++) {
@@ -57,7 +59,7 @@ namespace Blocks {
   void DimensionalSplittingBlock::updateUnknowns(RealType dt) {
 // Loop over all inner cells
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) if (g_useOpenMP)
 #endif
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
@@ -72,7 +74,7 @@ namespace Blocks {
 
 // Loop over horizontal edges
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) if (g_useOpenMP)
 #endif
     for (int y = 1; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
@@ -110,7 +112,7 @@ namespace Blocks {
 
 // Loop over all inner cells
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static)
+#pragma omp parallel for schedule(static) if (g_useOpenMP)
 #endif
     for (int y = 1; y < ny_ + 1; y++) {
       for (int x = 1; x < nx_ + 1; x++) {

@@ -6,12 +6,18 @@
 #include <imgui.h>
 #include <iostream>
 
+#ifdef ENABLE_OPENMP
+#include <omp.h>
+#endif
+
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
 #include "Scenarios/TsunamiScenario.hpp"
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
+
+int g_useOpenMP = 0;
 
 namespace App {
 
@@ -47,6 +53,8 @@ namespace App {
     u_color = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
     u_util  = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
 
+    bgfx::setDebug(m_debugFlags);
+    bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
   }
 
@@ -154,32 +162,44 @@ namespace App {
 
     ImGui::SeparatorText("Debug Options");
 
-    static bool stats = false;
+    static bool stats = m_debugFlags & BGFX_DEBUG_STATS;
     if (ImGui::Checkbox("Stats", &stats)) {
-      static int debugFlags = BGFX_DEBUG_NONE;
-      debugFlags ^= BGFX_DEBUG_STATS;
-      bgfx::setDebug(debugFlags);
+      m_debugFlags ^= BGFX_DEBUG_STATS;
+      bgfx::setDebug(m_debugFlags);
     }
     ImGui::SameLine();
-    static bool wireframe = false;
+    static bool wireframe = m_stateFlags & BGFX_STATE_PT_LINES;
     if (ImGui::Checkbox("Lines", &wireframe)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
     }
     ImGui::SameLine();
-    static bool points = false;
+    static bool points = m_stateFlags & BGFX_STATE_PT_POINTS;
     if (ImGui::Checkbox("Points", &points)) {
       m_stateFlags ^= BGFX_STATE_PT_POINTS;
     }
 
-    ImGui::SameLine(0.0f, 40.0f);
-    ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
+    ImGui::SeparatorText("Performance");
 
-#ifndef __EMSCRIPTEN__
-    ImGui::SameLine(ImGui::GetWindowSize().x - 75);
-    if (ImGui::Button("Exit")) {
-      glfwSetWindowShouldClose(m_window, 1);
+    static bool vsync = m_resetFlags & BGFX_RESET_VSYNC;
+    if (ImGui::Checkbox("VSync", &vsync)) {
+      m_resetFlags ^= BGFX_RESET_VSYNC;
+      bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
+    }
+    ImGui::SameLine();
+#ifdef ENABLE_OPENMP
+    ImGui::Checkbox("Use OpenMP", (bool*)&g_useOpenMP);
+    if (g_useOpenMP) {
+      static int maxThreads = omp_get_max_threads();
+      static int ompThreadCount = maxThreads;
+      ImGui::SameLine();
+      ImGui::SetNextItemWidth(50.0f);
+      if (ImGui::SliderInt("Threads", &ompThreadCount, 1, maxThreads)) {
+        omp_set_num_threads(ompThreadCount);
+      }
     }
 #endif
+    ImGui::SameLine();
+    ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
 
     ImGui::SameLine(ImGui::GetWindowSize().x - 30);
     ImGui::TextDisabled("(?)");
@@ -201,7 +221,7 @@ namespace App {
         scenarioSelectionOpen = false;
       }
 
-      static int          n[2]         = {20, 20};
+      static int          n[2]         = {100, 100};
       static ScenarioType scenarioType = ScenarioType::ArtificialTsunami;
 
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
@@ -213,9 +233,9 @@ namespace App {
         }
         ImGui::EndCombo();
       }
-      if (ImGui::InputInt2("Grid Dimensions (max 200)", n)) {
-        n[0] = std::clamp(n[0], 2, 200);
-        n[1] = std::clamp(n[1], 2, 200);
+      if (ImGui::InputInt2("Grid Dimensions", n)) {
+        n[0] = std::clamp(n[0], 2, 295);
+        n[1] = std::clamp(n[1], 2, 295);
       }
 
 #ifndef __EMSCRIPTEN__
@@ -389,7 +409,11 @@ namespace App {
 
     bgfx::TransientVertexBuffer tvb;
     bgfx::TransientIndexBuffer  tib;
-    bgfx::allocTransientBuffers(&tvb, CellVertex::layout, nx * ny, &tib, (nx - 1) * (ny - 1) * 6);
+    bool success = bgfx::allocTransientBuffers(&tvb, CellVertex::layout, nx * ny, &tib, (nx - 1) * (ny - 1) * 6, true);
+    if (!success) {
+      std::cout << "Allocation failed. Grid too large." << std::endl;
+      return;
+    }
 
     Float2D<CellVertex> vertices(ny, nx, (CellVertex*)tvb.data);
 
@@ -425,9 +449,11 @@ namespace App {
       }
     }
 
-    uint16_t*   indices      = (uint16_t*)tib.data;
-    int         c            = 0;
-    const auto* verticesBase = vertices.getData();
+    uint32_t* indices = (uint32_t*)tib.data;
+
+    const CellVertex* verticesBase = vertices.getData();
+
+    int c = 0;
 
     // TODO: Adjust loop so c is calculated and not incremented
 // #ifdef ENABLE_OPENMP
