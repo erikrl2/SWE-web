@@ -30,7 +30,7 @@ namespace App {
 
   bgfx::VertexLayout CellVertex::layout;
 
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 3, bgfx::AttribType::Float).end(); };
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::TexCoord0, 1, bgfx::AttribType::Uint8).end(); };
 
   static std::string scenarioTypeToString(ScenarioType type);
   static std::string viewTypeToString(ViewType type);
@@ -50,8 +50,11 @@ namespace App {
 
     CellVertex::init();
 
-    u_color = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
-    u_util  = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
+    u_gridData    = bgfx::createUniform("u_gridData", bgfx::UniformType::Vec4);
+    u_boundaryPos = bgfx::createUniform("u_boundaryPos", bgfx::UniformType::Vec4);
+    u_util        = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
+    u_color       = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
+    u_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::setDebug(m_debugFlags);
     bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
@@ -59,15 +62,21 @@ namespace App {
   }
 
   SweApp::~SweApp() {
-    if (m_block) {
-      delete m_block;
-    }
     if (m_scenario) {
       delete m_scenario;
+      delete m_block;
+      bgfx::destroy(m_vbh);
+      bgfx::destroy(m_ibh);
+      bgfx::destroy(m_heightMap);
     }
-    bgfx::destroy(m_program);
-    bgfx::destroy(u_color);
+
+    bgfx::destroy(u_gridData);
+    bgfx::destroy(u_boundaryPos);
     bgfx::destroy(u_util);
+    bgfx::destroy(u_color);
+    bgfx::destroy(u_heightMap);
+
+    bgfx::destroy(m_program);
   }
 
   void SweApp::update(float dt) {
@@ -95,7 +104,7 @@ namespace App {
       m_simulationTime += maxTimeStep;
     }
 
-    submitMesh();
+    updateGrid();
 
     bgfx::frame();
   }
@@ -143,7 +152,6 @@ namespace App {
 
     ImGui::SeparatorText("Visualization");
 
-    ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
     if (ImGui::DragFloat2("Data Range", &m_util[UtilIndex::Min], 0.01f)) {
       m_util[UtilIndex::Max] = std::max(m_util[UtilIndex::Min], m_util[UtilIndex::Max]);
     }
@@ -151,6 +159,7 @@ namespace App {
     if (ImGui::Button("Auto Scale")) {
       rescaleToDataRange();
     }
+    ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
@@ -163,7 +172,7 @@ namespace App {
     ImGui::SeparatorText("Debug Options");
 
     static bool stats = m_debugFlags & BGFX_DEBUG_STATS;
-    if (ImGui::Checkbox("Stats", &stats)) {
+    if (ImGui::Checkbox("Stats", &stats)) { // TODO: Fix crash
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
     }
@@ -171,11 +180,6 @@ namespace App {
     static bool wireframe = m_stateFlags & BGFX_STATE_PT_LINES;
     if (ImGui::Checkbox("Lines", &wireframe)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
-    }
-    ImGui::SameLine();
-    static bool points = m_stateFlags & BGFX_STATE_PT_POINTS;
-    if (ImGui::Checkbox("Points", &points)) {
-      m_stateFlags ^= BGFX_STATE_PT_POINTS;
     }
 
     ImGui::SeparatorText("Performance");
@@ -189,8 +193,8 @@ namespace App {
 #ifdef ENABLE_OPENMP
     ImGui::Checkbox("Use OpenMP", (bool*)&g_useOpenMP);
     if (g_useOpenMP) {
-      static int maxThreads = omp_get_max_threads();
-      static int ompThreadCount = maxThreads;
+      static const int maxThreads     = omp_get_max_threads();
+      static int       ompThreadCount = maxThreads;
       ImGui::SameLine();
       ImGui::SetNextItemWidth(50.0f);
       if (ImGui::SliderInt("Threads", &ompThreadCount, 1, maxThreads)) {
@@ -234,8 +238,8 @@ namespace App {
         ImGui::EndCombo();
       }
       if (ImGui::InputInt2("Grid Dimensions", n)) {
-        n[0] = std::clamp(n[0], 2, 295);
-        n[1] = std::clamp(n[1], 2, 295);
+        n[0] = std::clamp(n[0], 2, 2000);
+        n[1] = std::clamp(n[1], 2, 2000);
       }
 
 #ifndef __EMSCRIPTEN__
@@ -269,6 +273,10 @@ namespace App {
   void SweApp::loadBlock() {
     if (m_scenario) {
       delete m_scenario;
+      delete m_block;
+      bgfx::destroy(m_vbh);
+      bgfx::destroy(m_ibh);
+      bgfx::destroy(m_heightMap);
     }
 
     switch (m_scenarioType) {
@@ -307,25 +315,54 @@ namespace App {
     RealType bottom = m_scenario->getBoundaryPos(BoundaryEdge::Bottom);
     RealType top    = m_scenario->getBoundaryPos(BoundaryEdge::Top);
 
+    m_boundaryPos[0] = (float)left;
+    m_boundaryPos[1] = (float)right;
+    m_boundaryPos[2] = (float)bottom;
+    m_boundaryPos[3] = (float)top;
+
     int      nx = m_dimensions[0];
     int      ny = m_dimensions[1];
     RealType dx = (right - left) / m_dimensions[0];
     RealType dy = (top - bottom) / m_dimensions[1];
+
+    m_gridData[0] = (float)nx;
+    m_gridData[1] = (float)ny;
+    m_gridData[2] = (float)dx;
+    m_gridData[3] = (float)dy;
 
     std::cout << "Loading block with scenario: " << scenarioTypeToString(m_scenarioType) << std::endl;
     std::cout << "  nx: " << nx << ", ny: " << ny << std::endl;
     std::cout << "  dx: " << dx << ", dy: " << dy << std::endl;
     std::cout << "  Left: " << left << ", Right: " << right << ", Bottom: " << bottom << ", Top: " << top << std::endl;
 
-    if (m_block) {
-      delete m_block;
-    }
     m_block = new Blocks::DimensionalSplittingBlock(nx, ny, dx, dy);
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
     m_util[UtilIndex::ValueScale] = 1.0f;
     rescaleToDataRange();
+
+    m_vertices.resize(nx * ny);
+
+    m_indices.clear();
+    m_indices.reserve(2 * (nx + 1) * (ny - 1) - 2);
+    for (int j = 0; j < ny - 1; j++) {
+      for (int i = 0; i < nx; i++) {
+        m_indices.push_back(j * nx + i);
+        m_indices.push_back((j + 1) * nx + i);
+      }
+      if (j < ny - 2) {
+        m_indices.push_back((j + 1) * nx + (nx - 1));
+        m_indices.push_back((j + 1) * nx);
+      }
+    }
+
+    m_vbh = bgfx::createVertexBuffer(bgfx::makeRef(m_vertices.data(), m_vertices.size() * sizeof(CellVertex)), CellVertex::layout);
+    m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+
+    m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
+
+    // TODO: create batyhmetry map directy with data here?
   }
 
   void SweApp::rescaleToDataRange() {
@@ -371,13 +408,13 @@ namespace App {
 
     // TODO: Option to switch to perspective
 
-    float domainWidth  = m_dimensions[0] * m_block->getDx();
-    float domainHeight = m_dimensions[1] * m_block->getDy();
+    float left   = m_boundaryPos[0];
+    float right  = m_boundaryPos[1];
+    float bottom = m_boundaryPos[2];
+    float top    = m_boundaryPos[3];
 
-    float left   = (float)m_block->getOffsetX();
-    float right  = left + domainWidth;
-    float bottom = (float)m_block->getOffsetY();
-    float top    = bottom + domainHeight;
+    float domainWidth  = right - left;
+    float domainHeight = top - bottom;
 
     float aspect = (float)m_windowWidth / (float)m_windowHeight;
 
@@ -396,38 +433,24 @@ namespace App {
     bgfx::setViewTransform(0, nullptr, proj);
   }
 
-  void SweApp::submitMesh() {
+  void SweApp::updateGrid() {
     if (!m_block)
       return;
 
-    int   nx      = m_dimensions[0];
-    int   ny      = m_dimensions[1];
-    float dx      = (float)m_block->getDx();
-    float dy      = (float)m_block->getDy();
-    float originX = (float)m_block->getOffsetX();
-    float originY = (float)m_block->getOffsetY();
-
-    bgfx::TransientVertexBuffer tvb;
-    bgfx::TransientIndexBuffer  tib;
-    bool success = bgfx::allocTransientBuffers(&tvb, CellVertex::layout, nx * ny, &tib, (nx - 1) * (ny - 1) * 6, true);
-    if (!success) {
-      std::cout << "Allocation failed. Grid too large." << std::endl;
-      return;
-    }
-
-    Float2D<CellVertex> vertices(ny, nx, (CellVertex*)tvb.data);
+    int nx = m_dimensions[0];
+    int ny = m_dimensions[1];
 
     if (m_viewType == ViewType::HPlusB) {
       const auto& h = m_block->getWaterHeight();
       const auto& b = m_block->getBathymetry();
-// #ifdef ENABLE_OPENMP
-// #pragma omp parallel for schedule(static)
-// #endif
+
+      m_heightMapData.resize(nx * ny);
       for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-          vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(h[j + 1][i + 1] + b[j + 1][i + 1])};
+          m_heightMapData[j * nx + i] = (float)(h[j + 1][i + 1] + b[j + 1][i + 1]);
         }
       }
+      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
     } else {
       const Float2D<RealType>* values = nullptr;
       if (m_viewType == ViewType::H) {
@@ -439,47 +462,25 @@ namespace App {
       } else if (m_viewType == ViewType::B) {
         values = &m_block->getBathymetry();
       }
-// #ifdef ENABLE_OPENMP
-// #pragma omp parallel for schedule(static)
-// #endif
+
+      m_heightMapData.resize(nx * ny);
       for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-          vertices[j][i] = {originX + (i + 0.5f) * dx, originY + (j + 0.5f) * dy, (float)(*values)[j + 1][i + 1]};
+          m_heightMapData[j * nx + i] = (float)(*values)[j + 1][i + 1];
         }
       }
+      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
     }
 
-    uint32_t* indices = (uint32_t*)tib.data;
+    bgfx::setIndexBuffer(m_ibh);
+    bgfx::setVertexBuffer(0, m_vbh);
 
-    const CellVertex* verticesBase = vertices.getData();
+    bgfx::setTexture(0, u_heightMap, m_heightMap);
 
-    int c = 0;
-
-    // TODO: Adjust loop so c is calculated and not incremented
-// #ifdef ENABLE_OPENMP
-// #pragma omp parallel for schedule(static)
-// #endif
-    for (int j = 0; j < ny - 1; j++) {
-      for (int i = 0; i < nx - 1; i++) {
-        int topLeft     = &vertices[j][i] - verticesBase;
-        int topRight    = topLeft + 1;
-        int bottomLeft  = &vertices[j + 1][i] - verticesBase;
-        int bottomRight = bottomLeft + 1;
-        // Draw clockwise because y is flipped from projection and CW-culling is default
-        indices[c++] = topLeft;
-        indices[c++] = topRight;
-        indices[c++] = bottomLeft;
-        indices[c++] = bottomLeft;
-        indices[c++] = topRight;
-        indices[c++] = bottomRight;
-      }
-    }
-
-    bgfx::setIndexBuffer(&tib);
-    bgfx::setVertexBuffer(0, &tvb);
-
-    bgfx::setUniform(u_color, m_color);
+    bgfx::setUniform(u_gridData, m_gridData);
+    bgfx::setUniform(u_boundaryPos, m_boundaryPos);
     bgfx::setUniform(u_util, m_util);
+    bgfx::setUniform(u_color, m_color);
 
     bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);

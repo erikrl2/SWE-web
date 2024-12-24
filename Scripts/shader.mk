@@ -22,9 +22,9 @@ SHADER_TMP=tmp
 
 vs_%.bin.h : vs_%.sc
 	@echo [$(<)]
-	 $(SILENT) $(SHADERC) $(VS_FLAGS) --platform linux   -p 120    -f $(<) -o "$(SHADER_TMP)" --bin2c $(shell basename $(<) .sc)_glsl
+	 $(SILENT) $(SHADERC) $(VS_FLAGS) --platform linux   -p 130    -f $(<) -o "$(SHADER_TMP)" --bin2c $(shell basename $(<) .sc)_glsl
 	@cat "$(SHADER_TMP)" > $(@)
-	-$(SILENT) $(SHADERC) $(VS_FLAGS) --platform asm.js  -p 100_es -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_essl
+	-$(SILENT) $(SHADERC) $(VS_FLAGS) --platform asm.js  -p 300_es -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_essl
 	-@cat "$(SHADER_TMP)" >> $(@)
 	-@printf "static const uint8_t $(basename $(notdir $(<)))_spv[]{0}; // not supported\n" | tr -d '\015' >> $(@)
 	-@printf "static const uint8_t $(basename $(notdir $(<)))_dx11[]{0}; // not supported\n" | tr -d '\015' >> $(@)
@@ -32,9 +32,9 @@ vs_%.bin.h : vs_%.sc
 
 fs_%.bin.h : fs_%.sc
 	@echo [$(<)]
-	 $(SILENT) $(SHADERC) $(FS_FLAGS) --platform linux   -p 120   -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_glsl
+	 $(SILENT) $(SHADERC) $(FS_FLAGS) --platform linux   -p 130   -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_glsl
 	@cat "$(SHADER_TMP)" > $(@)
-	-$(SILENT) $(SHADERC) $(FS_FLAGS) --platform asm.js -p 100_es -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_essl
+	-$(SILENT) $(SHADERC) $(FS_FLAGS) --platform asm.js -p 300_es -f $(<) -o "$(SHADER_TMP)" --bin2c $(basename $(notdir $(<)))_essl
 	-@cat "$(SHADER_TMP)" >> $(@)
 	-@printf "static const uint8_t $(basename $(notdir $(<)))_spv[]{0}; // not supported\n" | tr -d '\015' >> $(@)
 	-@printf "static const uint8_t $(basename $(notdir $(<)))_dx11[]{0}; // not supported\n" | tr -d '\015' >> $(@)

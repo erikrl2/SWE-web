@@ -1,3 +1,5 @@
+#include <vector>
+
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Core/Application.hpp"
 #include "Types/Float2D.hpp"
@@ -5,7 +7,7 @@
 namespace App {
 
   struct CellVertex {
-    float x, y, z;
+    uint8_t placeholder = 0;
 
     static bgfx::VertexLayout layout;
     static void               init();
@@ -37,7 +39,7 @@ namespace App {
     void rescaleToDataRange();
 
     void updateTransform();
-    void submitMesh();
+    void updateGrid();
 
   private:
     static void dropFileCallback(GLFWwindow* window, int count, const char** paths);
@@ -45,14 +47,29 @@ namespace App {
   private:
     bgfx::ProgramHandle m_program;
 
-    bgfx::UniformHandle u_color;
+    bgfx::VertexBufferHandle m_vbh;
+    bgfx::IndexBufferHandle  m_ibh;
+
+    bgfx::UniformHandle u_gridData;
+    bgfx::UniformHandle u_boundaryPos;
     bgfx::UniformHandle u_util;
+    bgfx::UniformHandle u_color;
 
+    bgfx::UniformHandle u_heightMap;
+    bgfx::TextureHandle m_heightMap;
+
+    std::vector<CellVertex> m_vertices;
+    std::vector<uint32_t>   m_indices;
+
+    float m_gridData[4]{};
+    float m_boundaryPos[4]{};
     float m_util[4]{};
-    float m_color[4]          = {1.0f, 1.0f, 1.0f, 1.0f};
-    float m_cameraClipping[2] = {0.0f, 10000.0f};
+    float m_color[4] = {1.0f, 1.0f, 1.0f, 1.0f};
 
-    float m_clearColor[4] = {0.32f, 0.34f, 0.43f, 1.0f};
+    std::vector<float> m_heightMapData;
+
+    float m_cameraClipping[2] = {0.0f, 10000.0f};
+    float m_clearColor[4]     = {0.16f, 0.17f, 0.19f, 1.0f};
 
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
@@ -72,7 +89,7 @@ namespace App {
 
     float m_timeScale = 60.0f;
 
-    uint64_t m_stateFlags = BGFX_STATE_DEFAULT;
+    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
     uint32_t m_debugFlags = BGFX_DEBUG_NONE;
   };

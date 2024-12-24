@@ -1,21 +1,34 @@
-$input a_position
 $output v_color0
 
 #include "common.sh"
 
+uniform vec4 u_gridData;
+uniform vec4 u_boundaryPos;
 uniform vec4 u_util;
 uniform vec4 u_color;
 
+uniform sampler2D u_heightMap;
+
+int mod(int a, int b) {
+    return a - b * (a / b);
+}
+
 void main() {
-  float hMin       = u_util[0];
-  float hMax       = u_util[1];
-  float valueScale = u_util[2];
+  vec2  dataRange  = u_util.xy;
+  vec2  gridSize   = u_gridData.xy;
+  vec2  cellSize   = u_gridData.zw;
+  vec2  gridStart  = u_boundaryPos.xz + 0.5 * cellSize;
+  float valueScale = u_util.z;
+  int   nx         = int(gridSize.x);
 
-  gl_Position = mul(u_modelViewProj, vec4(a_position.xy, a_position.z * valueScale, 1.0));
+  vec2 gridPos  = vec2(mod(gl_VertexID, nx), gl_VertexID / nx);
+  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, gridPos / gridSize).r);
 
-  float factor = 0.0;
-  if (hMax != hMin) {
-    factor = (a_position.z - hMin) / (hMax - hMin);
+  gl_Position = mul(u_modelViewProj, vec4(worldPos.xy, worldPos.z * valueScale, 1.0));
+
+  float colFactor = 0.0;
+  if (dataRange.x != dataRange.y) {
+    colFactor = (worldPos.z - dataRange.x) / (dataRange.y - dataRange.x);
   }
-  v_color0 = vec4(factor * u_color.xyz, 1.0);
+  v_color0 = vec4(colFactor * u_color.xyz, 1.0);
 }
