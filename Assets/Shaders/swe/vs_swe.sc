@@ -22,7 +22,7 @@ void main() {
   int   nx         = int(gridSize.x);
 
   vec2 gridPos  = vec2(mod(gl_VertexID, nx), gl_VertexID / nx);
-  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, gridPos / gridSize).r);
+  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, (gridPos + 0.5) / gridSize).r);
 
   gl_Position = mul(u_modelViewProj, vec4(worldPos.xy, worldPos.z * valueScale, 1.0));
 
