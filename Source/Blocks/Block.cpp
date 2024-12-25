@@ -20,11 +20,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SWE.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- * @section DESCRIPTION
- *
- * TODO
  */
 
 #include "Block.hpp"
@@ -52,7 +47,7 @@ Blocks::Block::Block(int nx, int ny, RealType dx, RealType dy):
   offsetY_(0) {
 
   for (int i = 0; i < 4; i++) {
-    boundary_[i] = BoundaryType::Passive;
+    boundary_[i] = BoundaryType::Count; // (invalid)
   }
 }
 
@@ -215,8 +210,7 @@ void Blocks::Block::setGhostLayer() {
   //  Call to virtual function to set ghost layer values
   setBoundaryConditions();
 
-  //  Synchronize the ghost layers (for BoundaryType::Passive and BoundaryType::Connect conditions) with accelerator
-  //  memory
+  //  Synchronize the ghost layers with accelerator memory
   synchGhostLayerAfterWrite();
 }
 
@@ -280,7 +274,6 @@ void Blocks::Block::synchBathymetryBeforeRead() {}
 void Blocks::Block::synchCopyLayerBeforeRead() {}
 
 void Blocks::Block::setBoundaryConditions() {
-  // BoundaryType::Connect conditions are set in the calling function setGhostLayer
   // BoundaryType::Passive conditions need to be set by the component using Blocks::Block
 
   // Left boundary
@@ -301,9 +294,6 @@ void Blocks::Block::setBoundaryConditions() {
     };
     break;
   }
-  case BoundaryType::Connect:
-  case BoundaryType::Passive:
-    break;
   default:
     assert(false);
     break;
@@ -327,9 +317,6 @@ void Blocks::Block::setBoundaryConditions() {
     };
     break;
   }
-  case BoundaryType::Connect:
-  case BoundaryType::Passive:
-    break;
   default:
     assert(false);
     break;
@@ -353,9 +340,6 @@ void Blocks::Block::setBoundaryConditions() {
     };
     break;
   }
-  case BoundaryType::Connect:
-  case BoundaryType::Passive:
-    break;
   default:
     assert(false);
     break;
@@ -379,9 +363,6 @@ void Blocks::Block::setBoundaryConditions() {
     };
     break;
   }
-  case BoundaryType::Connect:
-  case BoundaryType::Passive:
-    break;
   default:
     assert(false);
     break;

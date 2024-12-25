@@ -10,29 +10,28 @@
 namespace Scenarios {
 
   class TestScenario: public Scenario {
-    int n;
-
   public:
-    TestScenario(int n):
-      n(n) {}
+    TestScenario(BoundaryType boundaryType, int n):
+      boundaryType_(boundaryType),
+      n_(n) {}
 
     TestScenario(const TestScenario& other) = delete;
 
-    RealType getWaterHeight(RealType x, RealType y) const override {
-      return x + y; // x,y in [1,n]
-    }
+    RealType getWaterHeight(RealType x, RealType y) const override { return x + y; }
 
     RealType getBoundaryPos(BoundaryEdge edge) const override {
       if (edge == BoundaryEdge::Left || edge == BoundaryEdge::Bottom) {
         return RealType(0.5);
       } else {
-        return RealType(n + 0.5);
+        return RealType(n_ + 0.5);
       }
     }
 
-    double getEndSimulationTime() const override { return RealType(10.0); }
+    BoundaryType getBoundaryType([[maybe_unused]] BoundaryEdge edge) const override { return boundaryType_; }
 
-    int getCellCount() { return n; }
+  private:
+    BoundaryType boundaryType_;
+    int          n_;
   };
 
 } // namespace Scenarios

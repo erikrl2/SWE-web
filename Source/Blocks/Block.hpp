@@ -20,11 +20,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with SWE.  If not, see <http://www.gnu.org/licenses/>.
- *
- *
- * @section DESCRIPTION
- *
- * TODO
  */
 
 #pragma once

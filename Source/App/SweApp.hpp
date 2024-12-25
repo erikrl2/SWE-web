@@ -20,6 +20,7 @@ namespace App {
 #endif
     ArtificialTsunami,
     Test,
+    // TODO: Add more scenarios
     Count
   };
 
@@ -77,17 +78,18 @@ namespace App {
     ScenarioType m_scenarioType = ScenarioType::None;
     int          m_dimensions[2]{};
 
-    ViewType m_viewType = ViewType::H;
+    ViewType     m_viewType          = ViewType::H;
+    BoundaryType m_boundaryType      = BoundaryType::Outflow;
+    float        m_timeScale         = 60.0f;
+    float        m_endSimulationTime = 0.0;
 
 #ifndef __EMSCRIPTEN__
     char m_bathymetryFile[128]{};
     char m_displacementFile[128]{};
 #endif
 
-    bool   m_playing        = false;
-    double m_simulationTime = 0.0;
-
-    float m_timeScale = 60.0f;
+    bool  m_playing        = false;
+    float m_simulationTime = 0.0;
 
     uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;

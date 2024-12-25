@@ -32,8 +32,6 @@ RealType Scenarios::Scenario::getBathymetry([[maybe_unused]] RealType x, [[maybe
 
 RealType Scenarios::Scenario::getWaterHeightAtRest() const { return RealType(10.0); }
 
-double Scenarios::Scenario::getEndSimulationTime() const { return 0.1; }
-
 BoundaryType Scenarios::Scenario::getBoundaryType([[maybe_unused]] BoundaryEdge edge) const { return BoundaryType::Wall; }
 
 RealType Scenarios::Scenario::getBoundaryPos(BoundaryEdge edge) const {

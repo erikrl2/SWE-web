@@ -20,7 +20,7 @@ namespace Scenarios {
      * @param endSimulationTime The time at which the simulation ends.
      * @param boundaryType The type of boundary conditions for the scenario.
      */
-    ArtificialTsunamiScenario(double endSimulationTime, BoundaryType boundaryType);
+    ArtificialTsunamiScenario(BoundaryType boundaryType);
 
     ArtificialTsunamiScenario(const ArtificialTsunamiScenario&) = delete;
 
@@ -54,15 +54,8 @@ namespace Scenarios {
      */
     RealType getBoundaryPos(BoundaryEdge edge) const override;
 
-    /**
-     * @brief Gets the end simulation time.
-     * @return The end simulation time.
-     */
-    double getEndSimulationTime() const override { return endSimulationTime_; }
-
   private:
-    double       endSimulationTime_; ///< The time at which the simulation ends.
-    BoundaryType boundaryType_;      ///< The boundary condition type for the scenario.
+    BoundaryType boundaryType_; ///< The boundary condition type for the scenario.
   };
 
 } // namespace Scenarios

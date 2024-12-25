@@ -5,6 +5,7 @@
 #include <bx/math.h>
 #include <imgui.h>
 #include <iostream>
+#include <limits>
 
 #ifdef ENABLE_OPENMP
 #include <omp.h>
@@ -34,6 +35,7 @@ namespace App {
 
   static std::string scenarioTypeToString(ScenarioType type);
   static std::string viewTypeToString(ViewType type);
+  static std::string boundaryTypeToString(BoundaryType type);
   static uint32_t    colorToInt(float* color4);
 
   // Has to match order in shader
@@ -101,7 +103,11 @@ namespace App {
       m_block->updateUnknowns(maxTimeStep);
 #endif
 
-      m_simulationTime += maxTimeStep;
+      m_simulationTime += (float)maxTimeStep;
+
+      if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
+        m_playing = false;
+      }
     }
 
     updateGrid();
@@ -109,6 +115,7 @@ namespace App {
     bgfx::frame();
   }
 
+  // TODO: Add more usefule shortcuts
   void SweApp::updateImGui(float dt) {
     static bool scenarioSelectionOpen = false;
 
@@ -120,6 +127,7 @@ namespace App {
     if (ImGui::Button("Select Scenario") || ImGui::IsKeyPressed(ImGuiKey_S)) {
       scenarioSelectionOpen = true;
     }
+
     ImGui::SameLine();
     ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
     if (ImGui::Button("Reset") || ImGui::IsKeyPressed(ImGuiKey_R)) {
@@ -129,15 +137,16 @@ namespace App {
         m_playing        = false;
       }
     }
+
     ImGui::SameLine();
     if (ImGui::Button(!m_playing ? "Start" : "Stop") || ImGui::IsKeyPressed(ImGuiKey_Space)) {
       if (m_block) {
         m_playing = !m_playing;
       }
     }
+
     ImGui::SameLine();
     ImGui::Text("Time: %.1f s", m_simulationTime);
-    ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt);
 
     if (ImGui::BeginCombo("View Type", viewTypeToString(m_viewType).c_str())) {
       for (int i = 0; i < (int)ViewType::Count; i++) {
@@ -149,6 +158,24 @@ namespace App {
       }
       ImGui::EndCombo();
     }
+
+    if (ImGui::BeginCombo("Boundary Type", boundaryTypeToString(m_boundaryType).c_str())) {
+      for (int i = 0; i < (int)BoundaryType::Count; i++) {
+        BoundaryType type = (BoundaryType)i;
+        if (ImGui::Selectable(boundaryTypeToString(type).c_str(), m_boundaryType == type)) {
+          m_boundaryType = type;
+          m_block->setBoundaryType(BoundaryEdge::Left, m_boundaryType);
+          m_block->setBoundaryType(BoundaryEdge::Right, m_boundaryType);
+          m_block->setBoundaryType(BoundaryEdge::Bottom, m_boundaryType);
+          m_block->setBoundaryType(BoundaryEdge::Top, m_boundaryType);
+        }
+      }
+      ImGui::EndCombo();
+    }
+
+    ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt);
+
+    ImGui::DragFloat("End Simulation Time", &m_endSimulationTime, 1.0f, 0.0f, std::numeric_limits<float>::max());
 
     ImGui::SeparatorText("Visualization");
 
@@ -172,7 +199,7 @@ namespace App {
     ImGui::SeparatorText("Debug Options");
 
     static bool stats = m_debugFlags & BGFX_DEBUG_STATS;
-    if (ImGui::Checkbox("Stats", &stats)) { // TODO: Fix crash
+    if (ImGui::Checkbox("Stats", &stats)) {
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
     }
@@ -281,15 +308,14 @@ namespace App {
 
     switch (m_scenarioType) {
     case ScenarioType::Test:
-      m_scenario = new Scenarios::TestScenario(m_dimensions[0]);
+      m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions[0]);
       break;
     case ScenarioType::ArtificialTsunami:
-      // TODO: Implement BoundaryType selection
-      m_scenario = new Scenarios::ArtificialTsunamiScenario(0, BoundaryType::Wall);
+      m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
       break;
 #ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami: {
-      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, 0, BoundaryType::Outflow, m_dimensions[0], m_dimensions[1]);
+      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions[0], m_dimensions[1]);
       if (s->success()) {
         m_scenario = s;
         break;
@@ -342,6 +368,8 @@ namespace App {
     m_util[UtilIndex::ValueScale] = 1.0f;
     rescaleToDataRange();
 
+    m_endSimulationTime = 0.0;
+
     m_vertices.resize(nx * ny);
 
     m_indices.clear();
@@ -361,8 +389,6 @@ namespace App {
     m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
 
     m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
-
-    // TODO: create batyhmetry map directy with data here?
   }
 
   void SweApp::rescaleToDataRange() {
@@ -541,6 +567,18 @@ namespace App {
       return "Bathymetry";
     case ViewType::HPlusB:
       return "Water Height + Bathymetry";
+    default:
+      assert(false);
+    }
+    return {};
+  }
+
+  static std::string boundaryTypeToString(BoundaryType type) {
+    switch (type) {
+    case BoundaryType::Wall:
+      return "Wall";
+    case BoundaryType::Outflow:
+      return "Outflow";
     default:
       assert(false);
     }

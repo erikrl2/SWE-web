@@ -2,8 +2,7 @@
 
 #include <cmath>
 
-Scenarios::ArtificialTsunamiScenario::ArtificialTsunamiScenario(double endSimulationTime, BoundaryType boundaryType):
-  endSimulationTime_(endSimulationTime),
+Scenarios::ArtificialTsunamiScenario::ArtificialTsunamiScenario(BoundaryType boundaryType):
   boundaryType_(boundaryType) {}
 
 RealType Scenarios::ArtificialTsunamiScenario::getWaterHeight([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(100.0); }

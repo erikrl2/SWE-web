@@ -5,10 +5,7 @@
 #include <cmath>
 #include <netcdf>
 
-Scenarios::TsunamiScenario::TsunamiScenario(
-  const std::string& bathymetryFile, const std::string& displacementFile, double endSimulationTime, BoundaryType boundaryType, int nX, int nY
-):
-  endSimulationTime_(endSimulationTime),
+Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY):
   boundaryType_(boundaryType),
   nX_(nX),
   nY_(nY) {

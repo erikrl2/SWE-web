@@ -13,7 +13,7 @@ namespace Scenarios {
    */
   class TsunamiScenario: public Scenario {
   public:
-    TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, double endSimulationTime, BoundaryType boundaryType, int nX, int nY);
+    TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY);
     ~TsunamiScenario() override = default;
 
     RealType getWaterHeight(RealType x, RealType y) const override;
@@ -22,8 +22,6 @@ namespace Scenarios {
     BoundaryType getBoundaryType(BoundaryEdge) const override { return boundaryType_; }
     RealType     getBoundaryPos(BoundaryEdge edge) const override { return boundaryPos_[edge]; }
 
-    double getEndSimulationTime() const override { return endSimulationTime_; }
-
     bool success() const { return success_; }
 
   private:
@@ -31,7 +29,6 @@ namespace Scenarios {
     RealType getDisplacement(RealType x, RealType y) const;
 
   private:
-    double       endSimulationTime_;
     BoundaryType boundaryType_;
     int          nX_, nY_;
     RealType     dX_, dY_;
