@@ -1,3 +1,4 @@
+#include <bgfx/embedded_shader.h>
 #include <vector>
 
 #include "Blocks/DimensionalSplitting.hpp"
@@ -25,6 +26,7 @@ namespace App {
   };
 
   enum class ViewType { H, Hu, Hv, B, HPlusB, Count };
+  enum class UtilIndex { Min, Max, ValueScale };
 
   class SweApp: public Core::Application {
   public:
@@ -35,15 +37,24 @@ namespace App {
     void update(float dt) override;
     void updateImGui(float dt) override;
 
+    void onKeyPressed(int key) override;
+    void onFileDropped(std::string_view path) override;
+
   private:
+    void loadScenario();
+    void resetScenario();
     void loadBlock();
+    void setBlockBoundaryType();
     void rescaleToDataRange();
 
     void updateTransform();
     void updateGrid();
 
   private:
-    static void dropFileCallback(GLFWwindow* window, int count, const char** paths);
+    static std::string scenarioTypeToString(ScenarioType type);
+    static std::string viewTypeToString(ViewType type);
+    static std::string boundaryTypeToString(BoundaryType type);
+    static uint32_t    colorToInt(float* color4);
 
   private:
     bgfx::ProgramHandle m_program;
@@ -94,6 +105,16 @@ namespace App {
     uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_CULL_CCW | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
     uint32_t m_debugFlags = BGFX_DEBUG_NONE;
+
+    bool         m_showControls          = true;
+    bool         m_showScenarioSelection = false;
+    int          m_selectedDimensions[2] = {100, 100};
+    ScenarioType m_selectedScenarioType  = ScenarioType::ArtificialTsunami;
+    bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
+    bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
+
+  private:
+    static const bgfx::EmbeddedShader shaders[];
   };
 
 } // namespace App

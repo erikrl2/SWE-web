@@ -44,7 +44,9 @@ namespace Core {
       return;
     }
 
-    glfwSetFramebufferSizeCallback(m_window, windowSizeCallback); // works only for desktop
+    glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback); // works only for desktop
+    glfwSetKeyCallback(m_window, keyCallback);
+    glfwSetDropCallback(m_window, dropCallback);
 
     bgfx::renderFrame(); // signals bgfx not to create a render thread
 
@@ -111,7 +113,7 @@ namespace Core {
     int height = getCanvasHeight();
     if (width != s_app->m_windowWidth || height != s_app->m_windowHeight) {
       glfwSetWindowSize(s_app->m_window, width, height);
-      windowSizeCallback(s_app->m_window, width, height);
+      framebufferSizeCallback(s_app->m_window, width, height);
     }
 
     static double lastTime = glfwGetTime();
@@ -148,11 +150,26 @@ namespace Core {
 #endif
   }
 
-  void Application::windowSizeCallback(GLFWwindow*, int width, int height) {
+  void Application::framebufferSizeCallback(GLFWwindow*, int width, int height) {
     s_app->m_windowWidth  = width;
     s_app->m_windowHeight = height;
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+  }
+
+  void Application::keyCallback(GLFWwindow*, int key, int, int action, int) {
+    if (ImGui::GetIO().WantCaptureKeyboard)
+      return;
+
+    if (action == GLFW_PRESS) {
+      s_app->onKeyPressed(key);
+    }
+  }
+
+  void Application::dropCallback(GLFWwindow*, int count, const char** paths) {
+    for (int i = 0; i < count; ++i) {
+      s_app->onFileDropped(paths[i]);
+    }
   }
 
 } // namespace Core

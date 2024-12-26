@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <bgfx/embedded_shader.h>
 #include <bx/math.h>
+#include <filesystem>
 #include <imgui.h>
 #include <iostream>
 #include <limits>
@@ -22,28 +23,8 @@ int g_useOpenMP = 0;
 
 namespace App {
 
-  static const bgfx::EmbeddedShader shaders[] = {
-    BGFX_EMBEDDED_SHADER(vs_swe),
-    BGFX_EMBEDDED_SHADER(fs_swe),
-
-    BGFX_EMBEDDED_SHADER_END()
-  };
-
-  bgfx::VertexLayout CellVertex::layout;
-
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::TexCoord0, 1, bgfx::AttribType::Uint8).end(); };
-
-  static std::string scenarioTypeToString(ScenarioType type);
-  static std::string viewTypeToString(ViewType type);
-  static std::string boundaryTypeToString(BoundaryType type);
-  static uint32_t    colorToInt(float* color4);
-
-  // Has to match order in shader
-  enum UtilIndex { Min, Max, ValueScale };
-
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
-    glfwSetDropCallback(m_window, dropFileCallback);
 
     bgfx::RendererType::Enum type           = bgfx::getRendererType();
     bgfx::ShaderHandle       vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
@@ -86,7 +67,7 @@ namespace App {
 
     updateTransform();
 
-    if (m_playing) {
+    if (m_block && m_playing) {
       m_block->setGhostLayer();
 
       RealType scaleFactor = RealType(std::min(dt * m_timeScale, 1.0f));
@@ -115,34 +96,28 @@ namespace App {
     bgfx::frame();
   }
 
-  // TODO: Add more usefule shortcuts
   void SweApp::updateImGui(float dt) {
-    static bool scenarioSelectionOpen = false;
+    if (!m_showControls)
+      return;
 
     // ImGui::SetNextWindowPos(ImVec2(20, m_windowHeight - 320), ImGuiCond_FirstUseEver);
     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
 
     ImGui::SeparatorText("Simulation");
 
-    if (ImGui::Button("Select Scenario") || ImGui::IsKeyPressed(ImGuiKey_S)) {
-      scenarioSelectionOpen = true;
+    if (ImGui::Button("Select Scenario")) {
+      m_showScenarioSelection = true;
     }
 
     ImGui::SameLine();
     ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
-    if (ImGui::Button("Reset") || ImGui::IsKeyPressed(ImGuiKey_R)) {
-      if (m_block) {
-        m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
-        m_simulationTime = 0.0;
-        m_playing        = false;
-      }
+    if (ImGui::Button("Reset")) {
+      resetScenario();
     }
 
     ImGui::SameLine();
-    if (ImGui::Button(!m_playing ? "Start" : "Stop") || ImGui::IsKeyPressed(ImGuiKey_Space)) {
-      if (m_block) {
-        m_playing = !m_playing;
-      }
+    if (ImGui::Button(!m_playing ? "Start" : "Stop")) {
+      m_playing = !m_playing;
     }
 
     ImGui::SameLine();
@@ -153,7 +128,6 @@ namespace App {
         ViewType type = (ViewType)i;
         if (ImGui::Selectable(viewTypeToString(type).c_str(), m_viewType == type)) {
           m_viewType = type;
-          rescaleToDataRange();
         }
       }
       ImGui::EndCombo();
@@ -164,10 +138,7 @@ namespace App {
         BoundaryType type = (BoundaryType)i;
         if (ImGui::Selectable(boundaryTypeToString(type).c_str(), m_boundaryType == type)) {
           m_boundaryType = type;
-          m_block->setBoundaryType(BoundaryEdge::Left, m_boundaryType);
-          m_block->setBoundaryType(BoundaryEdge::Right, m_boundaryType);
-          m_block->setBoundaryType(BoundaryEdge::Bottom, m_boundaryType);
-          m_block->setBoundaryType(BoundaryEdge::Top, m_boundaryType);
+          setBlockBoundaryType();
         }
       }
       ImGui::EndCombo();
@@ -179,8 +150,8 @@ namespace App {
 
     ImGui::SeparatorText("Visualization");
 
-    if (ImGui::DragFloat2("Data Range", &m_util[UtilIndex::Min], 0.01f)) {
-      m_util[UtilIndex::Max] = std::max(m_util[UtilIndex::Min], m_util[UtilIndex::Max]);
+    if (ImGui::DragFloat2("Data Range", &m_util[(int)UtilIndex::Min], 0.01f)) {
+      m_util[(int)UtilIndex::Max] = std::max(m_util[(int)UtilIndex::Min], m_util[(int)UtilIndex::Max]);
     }
     ImGui::SameLine();
     if (ImGui::Button("Auto Scale")) {
@@ -190,7 +161,7 @@ namespace App {
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
-    ImGui::DragFloat("Value Scale", &m_util[UtilIndex::ValueScale], 0.01f, 0.0f, 100.0f);
+    ImGui::DragFloat("Value Scale", &m_util[(int)UtilIndex::ValueScale], 0.01f, 0.0f, 100.0f);
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
@@ -198,14 +169,12 @@ namespace App {
 
     ImGui::SeparatorText("Debug Options");
 
-    static bool stats = m_debugFlags & BGFX_DEBUG_STATS;
-    if (ImGui::Checkbox("Stats", &stats)) {
+    if (ImGui::Checkbox("Stats", &m_showStats)) {
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
     }
     ImGui::SameLine();
-    static bool wireframe = m_stateFlags & BGFX_STATE_PT_LINES;
-    if (ImGui::Checkbox("Lines", &wireframe)) {
+    if (ImGui::Checkbox("Lines", &m_showLines)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
     }
 
@@ -234,43 +203,42 @@ namespace App {
 
     ImGui::SameLine(ImGui::GetWindowSize().x - 30);
     ImGui::TextDisabled("(?)");
-    const char* helpText = "Press 'S' to open scenario selection.\n"
-                           "Press 'Enter' to load scenario.\n"
-                           "Press 'Esc' to close scenario selection.\n"
-                           "Press 'Space' to start/stop simulation.\n"
-                           "Press 'R' to reset simulation.\n"
-                           "Drag and drop NetCDF files to set paths for Tsunami scenario.";
+    static const char* helpText = R"(Key Bindings:
+
+  C         : hide control window
+  S         : open scenario selection.
+  Space     : start/stop simulation.
+  R         : reset simulation.
+  H/U/V/B/A : select view type
+  O/W       : select boundary type
+  Q         : auto rescale data range
+  L         : show lines
+  F1        : show stats
+)";
     ImGui::SetItemTooltip("%s", helpText);
 
     ImGui::End(); // Controls
 
-    if (scenarioSelectionOpen) {
+    if (m_showScenarioSelection) {
       // ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
-      ImGui::Begin("Scenario Selection", &scenarioSelectionOpen, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
+      ImGui::Begin("Scenario Selection", &m_showScenarioSelection, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
 
-      if (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Escape)) {
-        scenarioSelectionOpen = false;
-      }
-
-      static int          n[2]         = {100, 100};
-      static ScenarioType scenarioType = ScenarioType::ArtificialTsunami;
-
-      if (ImGui::BeginCombo("Scenario", scenarioTypeToString(scenarioType).c_str())) {
+      if (ImGui::BeginCombo("Scenario", scenarioTypeToString(m_selectedScenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
           ScenarioType type = (ScenarioType)i;
-          if (ImGui::Selectable(scenarioTypeToString(type).c_str(), scenarioType == type)) {
-            scenarioType = type;
+          if (ImGui::Selectable(scenarioTypeToString(type).c_str(), m_selectedScenarioType == type)) {
+            m_selectedScenarioType = type;
           }
         }
         ImGui::EndCombo();
       }
-      if (ImGui::InputInt2("Grid Dimensions", n)) {
-        n[0] = std::clamp(n[0], 2, 2000);
-        n[1] = std::clamp(n[1], 2, 2000);
+      if (ImGui::InputInt2("Grid Dimensions", m_selectedDimensions)) {
+        m_selectedDimensions[0] = std::clamp(m_selectedDimensions[0], 2, 2000);
+        m_selectedDimensions[1] = std::clamp(m_selectedDimensions[1], 2, 2000);
       }
 
 #ifndef __EMSCRIPTEN__
-      if (scenarioType == ScenarioType::Tsunami) {
+      if (m_selectedScenarioType == ScenarioType::Tsunami) {
         ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
         ImGui::SameLine();
@@ -282,19 +250,33 @@ namespace App {
       }
 #endif
 
-      if (ImGui::Button("Load Scenario") || (ImGui::IsWindowFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter))) {
-        m_scenarioType        = scenarioType;
-        m_dimensions[0]       = n[0];
-        m_dimensions[1]       = n[1];
-        m_simulationTime      = 0.0;
-        m_playing             = false;
-        scenarioSelectionOpen = false;
-
-        loadBlock();
+      if (ImGui::Button("Load Scenario")) {
       }
 
       ImGui::End(); // Scenario Selection
     }
+  }
+
+  void SweApp::loadScenario() {
+    m_scenarioType          = m_selectedScenarioType;
+    m_dimensions[0]         = m_selectedDimensions[0];
+    m_dimensions[1]         = m_selectedDimensions[1];
+    m_simulationTime        = 0.0;
+    m_playing               = false;
+    m_showScenarioSelection = false;
+
+    loadBlock();
+  }
+
+  void SweApp::resetScenario() {
+    if (!m_block)
+      return;
+
+    m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
+    m_simulationTime = 0.0;
+    m_playing        = false;
+
+    setBlockBoundaryType();
   }
 
   void SweApp::loadBlock() {
@@ -365,7 +347,7 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    m_util[UtilIndex::ValueScale] = 1.0f;
+    m_util[(int)UtilIndex::ValueScale] = 1.0f;
     rescaleToDataRange();
 
     m_endSimulationTime = 0.0;
@@ -389,6 +371,16 @@ namespace App {
     m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
 
     m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
+  }
+
+  void SweApp::setBlockBoundaryType() {
+    if (!m_block)
+      return;
+
+    m_block->setBoundaryType(BoundaryEdge::Left, m_boundaryType);
+    m_block->setBoundaryType(BoundaryEdge::Right, m_boundaryType);
+    m_block->setBoundaryType(BoundaryEdge::Bottom, m_boundaryType);
+    m_block->setBoundaryType(BoundaryEdge::Top, m_boundaryType);
   }
 
   void SweApp::rescaleToDataRange() {
@@ -416,11 +408,11 @@ namespace App {
       values = hCopy;
     }
 
-    auto [min, max]        = std::minmax_element(values, values + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
-    m_util[UtilIndex::Min] = (float)*min - 0.01f;
-    m_util[UtilIndex::Max] = (float)*max + 0.01f;
-    m_cameraClipping[0]    = (float)*min * m_util[UtilIndex::ValueScale] - 10.0f;
-    m_cameraClipping[1]    = (float)*max * m_util[UtilIndex::ValueScale] + 10.0f;
+    auto [min, max]             = std::minmax_element(values, values + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
+    m_util[(int)UtilIndex::Min] = (float)*min - 0.01f;
+    m_util[(int)UtilIndex::Max] = (float)*max + 0.01f;
+    m_cameraClipping[0]         = (float)*min * m_util[(int)UtilIndex::ValueScale] - 10.0f;
+    m_cameraClipping[1]         = (float)*max * m_util[(int)UtilIndex::ValueScale] + 10.0f;
 
     if (m_viewType == ViewType::HPlusB)
       delete values;
@@ -512,32 +504,87 @@ namespace App {
     bgfx::submit(0, m_program);
   }
 
-  void SweApp::dropFileCallback(GLFWwindow*, int count, const char** paths) {
+  void SweApp::onKeyPressed(int key) {
+    switch (key) {
+    case GLFW_KEY_C:
+      m_showControls = !m_showControls;
+      break;
+    case GLFW_KEY_S:
+      m_showScenarioSelection = !m_showScenarioSelection;
+      break;
+    case GLFW_KEY_ENTER:
+      if (m_showScenarioSelection)
+        loadScenario();
+      break;
+    case GLFW_KEY_SPACE:
+      m_playing = !m_playing;
+      break;
+    case GLFW_KEY_R:
+      resetScenario();
+      break;
+    case GLFW_KEY_H:
+      m_viewType = ViewType::H;
+      break;
+    case GLFW_KEY_U:
+      m_viewType = ViewType::Hu;
+      break;
+    case GLFW_KEY_V:
+      m_viewType = ViewType::Hv;
+      break;
+    case GLFW_KEY_B:
+      m_viewType = ViewType::B;
+      break;
+    case GLFW_KEY_A:
+      m_viewType = ViewType::HPlusB;
+      break;
+    case GLFW_KEY_O:
+      m_boundaryType = BoundaryType::Outflow;
+      setBlockBoundaryType();
+      break;
+    case GLFW_KEY_W:
+      m_boundaryType = BoundaryType::Wall;
+      setBlockBoundaryType();
+      break;
+    case GLFW_KEY_Q:
+      rescaleToDataRange();
+      break;
+    case GLFW_KEY_L:
+      m_showLines = !m_showLines;
+      m_stateFlags ^= BGFX_STATE_PT_LINES;
+      break;
+    case GLFW_KEY_F1:
+      m_showStats = !m_showStats;
+      m_debugFlags ^= BGFX_DEBUG_STATS;
+      bgfx::setDebug(m_debugFlags);
+      break;
+    }
+
+    if (m_showScenarioSelection) {
+      for (int i = 0; i < (int)ScenarioType::Count && i <= 9; i++) {
+        if (key == GLFW_KEY_0 + i) {
+          m_selectedScenarioType = (ScenarioType)i;
+        }
+      }
+    }
+  }
+
+  void SweApp::onFileDropped(std::string_view path) {
 #ifndef __EMSCRIPTEN__
-    SweApp& app = dynamic_cast<SweApp&>(*Core::Application::get());
-    for (int i = 0; i < count; i++) {
-      const char* path = paths[i];
-      if (std::string_view(path).ends_with(".nc")) {
-        auto rfind = std::string_view(path).rfind('/');
-        if (rfind == std::string::npos) {
-          rfind = std::string_view(path).rfind('\\'); // Windows
-        }
-        if (rfind != std::string::npos) {
-          path += rfind + 1;
-        }
-        if (std::string_view(path).find("bath") != std::string::npos) {
-          strncpy(app.m_bathymetryFile, paths[i], sizeof(app.m_bathymetryFile));
-        } else if (std::string_view(path).find("displ") != std::string::npos) {
-          strncpy(app.m_displacementFile, paths[i], sizeof(app.m_displacementFile));
+    if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
+      std::filesystem::path filepath(path);
+      if (filepath.extension() == ".nc") {
+        std::string filename(filepath.filename());
+        if (filename.find("bath") != std::string::npos) {
+          strncpy(m_bathymetryFile, path.data(), sizeof(m_bathymetryFile));
+        } else if (filename.find("displ") != std::string::npos) {
+          strncpy(m_displacementFile, path.data(), sizeof(m_displacementFile));
         }
       }
     }
 #endif
   }
 
-  // Local helper functions
-
-  static std::string scenarioTypeToString(ScenarioType type) {
+  std::string SweApp::scenarioTypeToString(ScenarioType type) {
     switch (type) {
 #ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami:
@@ -555,7 +602,7 @@ namespace App {
     return {};
   }
 
-  static std::string viewTypeToString(ViewType type) {
+  std::string SweApp::viewTypeToString(ViewType type) {
     switch (type) {
     case ViewType::H:
       return "Water Height";
@@ -573,7 +620,7 @@ namespace App {
     return {};
   }
 
-  static std::string boundaryTypeToString(BoundaryType type) {
+  std::string SweApp::boundaryTypeToString(BoundaryType type) {
     switch (type) {
     case BoundaryType::Wall:
       return "Wall";
@@ -585,13 +632,24 @@ namespace App {
     return {};
   }
 
-  static uint32_t colorToInt(float* color4) {
+  uint32_t SweApp::colorToInt(float* color4) {
     uint32_t color = 0;
     for (int i = 0; i < 4; i++) {
       color |= (uint32_t)(color4[i] * 255) << ((3 - i) * 8);
     }
     return color;
   }
+
+  const bgfx::EmbeddedShader SweApp::shaders[] = {
+    BGFX_EMBEDDED_SHADER(vs_swe),
+    BGFX_EMBEDDED_SHADER(fs_swe),
+
+    BGFX_EMBEDDED_SHADER_END()
+  };
+
+  bgfx::VertexLayout CellVertex::layout;
+
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::TexCoord0, 1, bgfx::AttribType::Uint8).end(); };
 
 } // namespace App
 

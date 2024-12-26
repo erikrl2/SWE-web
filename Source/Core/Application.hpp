@@ -21,6 +21,9 @@ namespace Core {
     virtual void update(float dt)      = 0;
     virtual void updateImGui(float dt) = 0;
 
+    virtual void onKeyPressed(int key)                = 0;
+    virtual void onFileDropped(std::string_view path) = 0;
+
   public:
     static Application* get() { return s_app; }
 
@@ -43,7 +46,9 @@ namespace Core {
     static void emscriptenMainLoop();
 #endif
 
-    static void windowSizeCallback(GLFWwindow* window, int width, int height);
+    static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
+    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void dropCallback(GLFWwindow* window, int count, const char** paths);
 
   private:
     static inline Application* s_app = nullptr;
