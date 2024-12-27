@@ -166,6 +166,8 @@ namespace Core {
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
+    s_app->onResize(width, height);
+
     return EM_TRUE;
   }
 #endif
@@ -175,6 +177,8 @@ namespace Core {
     s_app->m_windowHeight = height;
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+
+    s_app->onResize(width, height);
   }
 
   void Application::glfwKeyCallback(GLFWwindow*, int key, int, int action, int) {

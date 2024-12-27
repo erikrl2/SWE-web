@@ -22,6 +22,7 @@ namespace Core {
     virtual void update(float dt)      = 0;
     virtual void updateImGui(float dt) = 0;
 
+    virtual void onResize(int width, int height)      = 0;
     virtual void onKeyPressed(int key)                = 0;
     virtual void onFileDropped(std::string_view path) = 0;
 

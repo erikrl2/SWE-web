@@ -42,6 +42,8 @@ namespace App {
     bgfx::setDebug(m_debugFlags);
     bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
+
+    m_camera.setWindowSize(m_windowWidth, m_windowHeight);
   }
 
   SweApp::~SweApp() {
@@ -65,7 +67,7 @@ namespace App {
   void SweApp::update(float dt) {
     bgfx::touch(0); // clears window if nothing is submitted
 
-    updateTransform();
+    updateCamera();
 
     if (m_block && m_playing) {
       m_block->setGhostLayer();
@@ -423,44 +425,26 @@ namespace App {
     auto [min, max]             = std::minmax_element(values, values + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
     m_util[(int)UtilIndex::Min] = (float)*min - 0.01f;
     m_util[(int)UtilIndex::Max] = (float)*max + 0.01f;
-    m_cameraClipping[0]         = (float)*min * m_util[(int)UtilIndex::ValueScale] - 10.0f;
-    m_cameraClipping[1]         = (float)*max * m_util[(int)UtilIndex::ValueScale] + 10.0f;
+    m_cameraClipping[0]         = 0.1f;
+    m_cameraClipping[1]         = 2.0f * (float)*max * m_util[(int)UtilIndex::ValueScale];
 
     if (m_viewType == ViewType::HPlusB)
       delete values;
   }
 
-  void SweApp::updateTransform() {
+  void SweApp::updateCamera() {
     if (!m_block)
       return;
-    if (m_windowWidth == 0 || m_windowHeight == 0)
+    if (m_windowWidth <= 0 || m_windowHeight <= 0)
       return;
 
-    // TODO: Option to switch to perspective
+    bx::Vec3 eye(0.0f, 0.0f, m_cameraClipping[1]);
+    bx::Vec3 target(0.0f, 0.0f, 0.0f);
+    m_camera.setView(eye, target);
 
-    float left   = m_boundaryPos[0];
-    float right  = m_boundaryPos[1];
-    float bottom = m_boundaryPos[2];
-    float top    = m_boundaryPos[3];
-
-    float domainWidth  = right - left;
-    float domainHeight = top - bottom;
-
-    float aspect = (float)m_windowWidth / (float)m_windowHeight;
-
-    if (aspect > domainWidth / domainHeight) {
-      float width = domainHeight * aspect;
-      left += (domainWidth - width) / 2.0f;
-      right = left + width;
-    } else {
-      float height = domainWidth / aspect;
-      bottom += (domainHeight - height) / 2.0f;
-      top = bottom + height;
-    }
-
-    float proj[16];
-    bx::mtxOrtho(proj, left, right, bottom, top, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left);
-    bgfx::setViewTransform(0, nullptr, proj);
+    m_camera.setBoundary(m_boundaryPos[0], m_boundaryPos[1], m_boundaryPos[2], m_boundaryPos[3]);
+    m_camera.setClippingPlanes(m_cameraClipping[0], m_cameraClipping[1]);
+    m_camera.applyViewProjection(0);
   }
 
   void SweApp::updateGrid() {
@@ -515,6 +499,8 @@ namespace App {
     bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);
   }
+
+  void SweApp::onResize(int width, int height) { m_camera.setWindowSize(width, height); }
 
   void SweApp::onKeyPressed(int key) {
     switch (key) {
