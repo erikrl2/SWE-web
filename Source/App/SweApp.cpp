@@ -128,6 +128,7 @@ namespace App {
         ViewType type = (ViewType)i;
         if (ImGui::Selectable(viewTypeToString(type).c_str(), m_viewType == type)) {
           m_viewType = type;
+          rescaleToDataRange();
         }
       }
       ImGui::EndCombo();
@@ -153,14 +154,18 @@ namespace App {
     if (ImGui::DragFloat2("Data Range", &m_util[(int)UtilIndex::Min], 0.01f)) {
       m_util[(int)UtilIndex::Max] = std::max(m_util[(int)UtilIndex::Min], m_util[(int)UtilIndex::Max]);
     }
+
     ImGui::SameLine();
     if (ImGui::Button("Auto Scale")) {
       rescaleToDataRange();
     }
+
     ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
+
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
+
     ImGui::DragFloat("Value Scale", &m_util[(int)UtilIndex::ValueScale], 0.01f, 0.0f, 100.0f);
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
@@ -173,11 +178,13 @@ namespace App {
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
     }
+
     ImGui::SameLine();
     if (ImGui::Checkbox("Lines", &m_showLines)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
     }
 
+#ifndef __EMSCRIPTEN__
     ImGui::SeparatorText("Performance");
 
     static bool vsync = m_resetFlags & BGFX_RESET_VSYNC;
@@ -185,6 +192,7 @@ namespace App {
       m_resetFlags ^= BGFX_RESET_VSYNC;
       bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
     }
+
     ImGui::SameLine();
 #ifdef ENABLE_OPENMP
     ImGui::Checkbox("Use OpenMP", (bool*)&g_useOpenMP);
@@ -198,6 +206,8 @@ namespace App {
       }
     }
 #endif
+#endif
+
     ImGui::SameLine();
     ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
 
@@ -213,7 +223,7 @@ namespace App {
   O/W       : select boundary type
   Q         : auto rescale data range
   L         : show lines
-  F1        : show stats
+  I         : show stats
 )";
     ImGui::SetItemTooltip("%s", helpText);
 
@@ -232,6 +242,7 @@ namespace App {
         }
         ImGui::EndCombo();
       }
+
       if (ImGui::InputInt2("Grid Dimensions", m_selectedDimensions)) {
         m_selectedDimensions[0] = std::clamp(m_selectedDimensions[0], 2, 2000);
         m_selectedDimensions[1] = std::clamp(m_selectedDimensions[1], 2, 2000);
@@ -241,9 +252,10 @@ namespace App {
       if (m_selectedScenarioType == ScenarioType::Tsunami) {
         ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
+
         ImGui::SameLine();
         ImGui::TextDisabled("(?)");
-        ImGui::SetItemTooltip("File name should contain 'bath' or 'displ' to be recognized.");
+        ImGui::SetItemTooltip("File name must contain 'bath' or 'displ' to be recognized.");
 
         ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
         ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
@@ -524,18 +536,23 @@ namespace App {
       break;
     case GLFW_KEY_H:
       m_viewType = ViewType::H;
+      rescaleToDataRange();
       break;
     case GLFW_KEY_U:
       m_viewType = ViewType::Hu;
+      rescaleToDataRange();
       break;
     case GLFW_KEY_V:
       m_viewType = ViewType::Hv;
+      rescaleToDataRange();
       break;
     case GLFW_KEY_B:
       m_viewType = ViewType::B;
+      rescaleToDataRange();
       break;
     case GLFW_KEY_A:
       m_viewType = ViewType::HPlusB;
+      rescaleToDataRange();
       break;
     case GLFW_KEY_O:
       m_boundaryType = BoundaryType::Outflow;
@@ -552,7 +569,7 @@ namespace App {
       m_showLines = !m_showLines;
       m_stateFlags ^= BGFX_STATE_PT_LINES;
       break;
-    case GLFW_KEY_F1:
+    case GLFW_KEY_I:
       m_showStats = !m_showStats;
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
@@ -605,15 +622,15 @@ namespace App {
   std::string SweApp::viewTypeToString(ViewType type) {
     switch (type) {
     case ViewType::H:
-      return "Water Height";
+      return "Water Height (H)";
     case ViewType::Hu:
-      return "Water Momentum X";
+      return "Water Momentum X (Hu)";
     case ViewType::Hv:
-      return "Water Momentum Y";
+      return "Water Momentum Y (Hv)";
     case ViewType::B:
-      return "Bathymetry";
+      return "Bathymetry (B)";
     case ViewType::HPlusB:
-      return "Water Height + Bathymetry";
+      return "Water Height + Bathymetry (H+B))";
     default:
       assert(false);
     }

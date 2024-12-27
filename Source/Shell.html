@@ -48,11 +48,6 @@
           return canvas;
         })(),
       };
-      window.onresize = function() {
-        const canvas = document.getElementById('canvas');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      };
       window.onerror = function(event) {
         console.log("onerror: " + event.message);
       };

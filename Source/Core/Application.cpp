@@ -44,9 +44,14 @@ namespace Core {
       return;
     }
 
-    glfwSetFramebufferSizeCallback(m_window, framebufferSizeCallback); // works only for desktop
-    glfwSetKeyCallback(m_window, keyCallback);
-    glfwSetDropCallback(m_window, dropCallback);
+#ifdef __EMSCRIPTEN__
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, emscriptenResizeCallback);
+#else
+    glfwSetFramebufferSizeCallback(m_window, glfwFramebufferSizeCallback);
+#endif
+
+    glfwSetKeyCallback(m_window, glfwKeyCallback);
+    glfwSetDropCallback(m_window, glfwDropCallback);
 
     bgfx::renderFrame(); // signals bgfx not to create a render thread
 
@@ -70,6 +75,13 @@ namespace Core {
 #elif __EMSCRIPTEN__
     bgfxInit.platformData.nwh = (void*)"#canvas";
     bgfxInit.type             = bgfx::RendererType::OpenGLES;
+#endif
+
+#ifdef __EMSCRIPTEN__
+    double w, h;
+    emscripten_get_element_css_size(".app", &w, &h);
+    emscripten_set_canvas_element_size("#canvas", (int)w, (int)h);
+    glfwSetWindowSize(s_app->m_window, (int)w, (int)h);
 #endif
 
     glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
@@ -98,22 +110,12 @@ namespace Core {
   }
 
 #ifdef __EMSCRIPTEN__
-  EM_JS(int, getCanvasWidth, (), { return document.getElementById('canvas').width; });
-  EM_JS(int, getCanvasHeight, (), { return document.getElementById('canvas').height; });
-
   void Application::emscriptenMainLoop() {
     glfwPollEvents();
 
     if (glfwWindowShouldClose(s_app->m_window)) {
       emscripten_cancel_main_loop();
       return;
-    }
-
-    int width  = getCanvasWidth();
-    int height = getCanvasHeight();
-    if (width != s_app->m_windowWidth || height != s_app->m_windowHeight) {
-      glfwSetWindowSize(s_app->m_window, width, height);
-      framebufferSizeCallback(s_app->m_window, width, height);
     }
 
     static double lastTime = glfwGetTime();
@@ -150,14 +152,32 @@ namespace Core {
 #endif
   }
 
-  void Application::framebufferSizeCallback(GLFWwindow*, int width, int height) {
+#ifdef __EMSCRIPTEN__
+  EM_BOOL Application::emscriptenResizeCallback(int, const EmscriptenUiEvent* e, void*) {
+    int width  = e->windowInnerWidth;
+    int height = e->windowInnerHeight;
+
+    s_app->m_windowWidth  = width;
+    s_app->m_windowHeight = height;
+
+    emscripten_set_canvas_element_size("#canvas", width, height);
+    glfwSetWindowSize(s_app->m_window, width, height);
+
+    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
+    bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+
+    return EM_TRUE;
+  }
+#endif
+
+  void Application::glfwFramebufferSizeCallback(GLFWwindow*, int width, int height) {
     s_app->m_windowWidth  = width;
     s_app->m_windowHeight = height;
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
   }
 
-  void Application::keyCallback(GLFWwindow*, int key, int, int action, int) {
+  void Application::glfwKeyCallback(GLFWwindow*, int key, int, int action, int) {
     if (ImGui::GetIO().WantCaptureKeyboard)
       return;
 
@@ -166,7 +186,7 @@ namespace Core {
     }
   }
 
-  void Application::dropCallback(GLFWwindow*, int count, const char** paths) {
+  void Application::glfwDropCallback(GLFWwindow*, int count, const char** paths) {
     for (int i = 0; i < count; ++i) {
       s_app->onFileDropped(paths[i]);
     }

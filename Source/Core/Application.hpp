@@ -4,6 +4,7 @@
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
 #endif
 
 #include <string>
@@ -44,11 +45,13 @@ namespace Core {
   private:
 #ifdef __EMSCRIPTEN__
     static void emscriptenMainLoop();
+
+    static EM_BOOL emscriptenResizeCallback(int eventType, const EmscriptenUiEvent* e, void* userData);
 #endif
 
-    static void framebufferSizeCallback(GLFWwindow* window, int width, int height);
-    static void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    static void dropCallback(GLFWwindow* window, int count, const char** paths);
+    static void glfwFramebufferSizeCallback(GLFWwindow* window, int width, int height);
+    static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void glfwDropCallback(GLFWwindow* window, int count, const char** paths);
 
   private:
     static inline Application* s_app = nullptr;
