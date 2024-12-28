@@ -4,6 +4,7 @@
 #include <bgfx/embedded_shader.h>
 #include <bx/math.h>
 #include <filesystem>
+#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <iostream>
 #include <limits>
@@ -18,6 +19,7 @@
 #include "Scenarios/TsunamiScenario.hpp"
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
+#include "Utils.hpp"
 
 int g_useOpenMP = 0;
 
@@ -40,10 +42,8 @@ namespace App {
     u_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::setDebug(m_debugFlags);
-    bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
+    bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
     bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
-
-    m_camera.setWindowSize(m_windowWidth, m_windowHeight);
   }
 
   SweApp::~SweApp() {
@@ -67,7 +67,7 @@ namespace App {
   void SweApp::update(float dt) {
     bgfx::touch(0); // clears window if nothing is submitted
 
-    updateCamera();
+    updateCamera(dt);
 
     if (m_block && m_playing) {
       m_block->setGhostLayer();
@@ -112,7 +112,7 @@ namespace App {
     }
 
     ImGui::SameLine();
-    ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions[0], m_dimensions[1]);
+    ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions.x, m_dimensions.y);
     if (ImGui::Button("Reset")) {
       resetScenario();
     }
@@ -153,8 +153,8 @@ namespace App {
 
     ImGui::SeparatorText("Visualization");
 
-    if (ImGui::DragFloat2("Data Range", &m_util[(int)UtilIndex::Min], 0.01f)) {
-      m_util[(int)UtilIndex::Max] = std::max(m_util[(int)UtilIndex::Min], m_util[(int)UtilIndex::Max]);
+    if (ImGui::DragFloat2("Data Range", m_util, 0.01f)) {
+      m_util.y = std::max(m_util.x, m_util.y);
     }
 
     ImGui::SameLine();
@@ -168,7 +168,7 @@ namespace App {
       m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
     }
 
-    ImGui::DragFloat("Value Scale", &m_util[(int)UtilIndex::ValueScale], 0.01f, 0.0f, 100.0f);
+    ImGui::DragFloat("Value Scale", &m_util.z, 0.01f, 0.0f, 100.0f);
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
@@ -192,7 +192,7 @@ namespace App {
     static bool vsync = m_resetFlags & BGFX_RESET_VSYNC;
     if (ImGui::Checkbox("VSync", &vsync)) {
       m_resetFlags ^= BGFX_RESET_VSYNC;
-      bgfx::reset(m_windowWidth, m_windowHeight, m_resetFlags);
+      bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
     }
 
     ImGui::SameLine();
@@ -246,8 +246,8 @@ namespace App {
       }
 
       if (ImGui::InputInt2("Grid Dimensions", m_selectedDimensions)) {
-        m_selectedDimensions[0] = std::clamp(m_selectedDimensions[0], 2, 2000);
-        m_selectedDimensions[1] = std::clamp(m_selectedDimensions[1], 2, 2000);
+        m_selectedDimensions.x = std::clamp(m_selectedDimensions.x, 2, 2000);
+        m_selectedDimensions.y = std::clamp(m_selectedDimensions.y, 2, 2000);
       }
 
 #ifndef __EMSCRIPTEN__
@@ -273,8 +273,7 @@ namespace App {
 
   void SweApp::loadScenario() {
     m_scenarioType          = m_selectedScenarioType;
-    m_dimensions[0]         = m_selectedDimensions[0];
-    m_dimensions[1]         = m_selectedDimensions[1];
+    m_dimensions            = m_selectedDimensions;
     m_simulationTime        = 0.0;
     m_playing               = false;
     m_showScenarioSelection = false;
@@ -304,14 +303,14 @@ namespace App {
 
     switch (m_scenarioType) {
     case ScenarioType::Test:
-      m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions[0]);
+      m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
       break;
     case ScenarioType::ArtificialTsunami:
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
       break;
 #ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami: {
-      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions[0], m_dimensions[1]);
+      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions.x, m_dimensions.y);
       if (s->success()) {
         m_scenario = s;
         break;
@@ -322,11 +321,10 @@ namespace App {
     }
 #endif
     case ScenarioType::None:
-      m_scenarioType  = ScenarioType::None;
-      m_dimensions[0] = 0;
-      m_dimensions[1] = 0;
-      m_block         = nullptr;
-      m_scenario      = nullptr;
+      m_scenarioType = ScenarioType::None;
+      m_dimensions   = {0, 0};
+      m_block        = nullptr;
+      m_scenario     = nullptr;
       return;
     default:
       assert(false);
@@ -337,20 +335,14 @@ namespace App {
     RealType bottom = m_scenario->getBoundaryPos(BoundaryEdge::Bottom);
     RealType top    = m_scenario->getBoundaryPos(BoundaryEdge::Top);
 
-    m_boundaryPos[0] = (float)left;
-    m_boundaryPos[1] = (float)right;
-    m_boundaryPos[2] = (float)bottom;
-    m_boundaryPos[3] = (float)top;
+    m_boundaryPos = {(float)left, (float)right, (float)bottom, (float)top};
 
-    int      nx = m_dimensions[0];
-    int      ny = m_dimensions[1];
-    RealType dx = (right - left) / m_dimensions[0];
-    RealType dy = (top - bottom) / m_dimensions[1];
+    int      nx = m_dimensions.x;
+    int      ny = m_dimensions.y;
+    RealType dx = (right - left) / RealType(nx);
+    RealType dy = (top - bottom) / RealType(ny);
 
-    m_gridData[0] = (float)nx;
-    m_gridData[1] = (float)ny;
-    m_gridData[2] = (float)dx;
-    m_gridData[3] = (float)dy;
+    m_gridData = {(float)nx, (float)ny, (float)dx, (float)dy};
 
     std::cout << "Loading block with scenario: " << scenarioTypeToString(m_scenarioType) << std::endl;
     std::cout << "  nx: " << nx << ", ny: " << ny << std::endl;
@@ -361,7 +353,7 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    m_util[(int)UtilIndex::ValueScale] = 1.0f;
+    m_util.z = 1.0f;
     rescaleToDataRange();
 
     m_endSimulationTime = 0.0;
@@ -403,6 +395,7 @@ namespace App {
 
     const RealType* values = nullptr;
 
+    // TODO: Move to Utils.hpp ?
     if (m_viewType == ViewType::H) {
       values = m_block->getWaterHeight().getData();
     } else if (m_viewType == ViewType::Hu) {
@@ -412,7 +405,7 @@ namespace App {
     } else if (m_viewType == ViewType::B) {
       values = m_block->getBathymetry().getData();
     } else if (m_viewType == ViewType::HPlusB) {
-      const int size  = (m_dimensions[0] + 2) * (m_dimensions[1] + 2);
+      const int size  = (m_dimensions.x + 2) * (m_dimensions.y + 2);
       RealType* hCopy = new RealType[size];
       memcpy(hCopy, m_block->getWaterHeight().getData(), size * sizeof(RealType));
       const RealType* b = m_block->getBathymetry().getData();
@@ -422,37 +415,33 @@ namespace App {
       values = hCopy;
     }
 
-    auto [min, max]             = std::minmax_element(values, values + (m_dimensions[0] + 2) * (m_dimensions[1] + 2));
-    m_util[(int)UtilIndex::Min] = (float)*min - 0.01f;
-    m_util[(int)UtilIndex::Max] = (float)*max + 0.01f;
-    m_cameraClipping[0]         = 0.1f;
-    m_cameraClipping[1]         = 2.0f * (float)*max * m_util[(int)UtilIndex::ValueScale];
+    auto [min, max]  = std::minmax_element(values, values + (m_dimensions.x + 2) * (m_dimensions.y + 2));
+    m_util.x         = (float)*min - 0.01f;
+    m_util.y         = (float)*max + 0.01f;
+    m_cameraClipping = {0.1f, (float)*max * m_util.z * 2.0f};
 
     if (m_viewType == ViewType::HPlusB)
       delete values;
   }
 
-  void SweApp::updateCamera() {
+  void SweApp::updateCamera(float dt) {
     if (!m_block)
       return;
-    if (m_windowWidth <= 0 || m_windowHeight <= 0)
+    if (m_windowSize.x <= 0 || m_windowSize.y <= 0)
       return;
 
-    bx::Vec3 eye(0.0f, 0.0f, m_cameraClipping[1]);
-    bx::Vec3 target(0.0f, 0.0f, 0.0f);
-    m_camera.setView(eye, target);
+    m_camera.setMouseOverUI(ImGui::GetIO().WantCaptureMouse);
 
-    m_camera.setBoundary(m_boundaryPos[0], m_boundaryPos[1], m_boundaryPos[2], m_boundaryPos[3]);
-    m_camera.setClippingPlanes(m_cameraClipping[0], m_cameraClipping[1]);
-    m_camera.applyViewProjection(0);
+    m_camera.update(dt);
+    m_camera.applyViewProjection();
   }
 
   void SweApp::updateGrid() {
     if (!m_block)
       return;
 
-    int nx = m_dimensions[0];
-    int ny = m_dimensions[1];
+    int nx = m_dimensions.x;
+    int ny = m_dimensions.y;
 
     if (m_viewType == ViewType::HPlusB) {
       const auto& h = m_block->getWaterHeight();
@@ -500,7 +489,7 @@ namespace App {
     bgfx::submit(0, m_program);
   }
 
-  void SweApp::onResize(int width, int height) { m_camera.setWindowSize(width, height); }
+  void SweApp::onResize(int, int) {}
 
   void SweApp::onKeyPressed(int key) {
     switch (key) {
@@ -571,6 +560,8 @@ namespace App {
     }
   }
 
+  void SweApp::onMouseScrolled(float, float dy) { m_camera.onMouseScrolled(dy); }
+
   void SweApp::onFileDropped(std::string_view path) {
 #ifndef __EMSCRIPTEN__
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
@@ -585,62 +576,6 @@ namespace App {
       }
     }
 #endif
-  }
-
-  std::string SweApp::scenarioTypeToString(ScenarioType type) {
-    switch (type) {
-#ifndef __EMSCRIPTEN__
-    case ScenarioType::Tsunami:
-      return "Tsunami";
-#endif
-    case ScenarioType::ArtificialTsunami:
-      return "Artificial Tsunami";
-    case ScenarioType::Test:
-      return "Test";
-    case ScenarioType::None:
-      return "None";
-    default:
-      assert(false);
-    }
-    return {};
-  }
-
-  std::string SweApp::viewTypeToString(ViewType type) {
-    switch (type) {
-    case ViewType::H:
-      return "Water Height (H)";
-    case ViewType::Hu:
-      return "Water Momentum X (Hu)";
-    case ViewType::Hv:
-      return "Water Momentum Y (Hv)";
-    case ViewType::B:
-      return "Bathymetry (B)";
-    case ViewType::HPlusB:
-      return "Water Height + Bathymetry (H+B))";
-    default:
-      assert(false);
-    }
-    return {};
-  }
-
-  std::string SweApp::boundaryTypeToString(BoundaryType type) {
-    switch (type) {
-    case BoundaryType::Wall:
-      return "Wall";
-    case BoundaryType::Outflow:
-      return "Outflow";
-    default:
-      assert(false);
-    }
-    return {};
-  }
-
-  uint32_t SweApp::colorToInt(float* color4) {
-    uint32_t color = 0;
-    for (int i = 0; i < 4; i++) {
-      color |= (uint32_t)(color4[i] * 255) << ((3 - i) * 8);
-    }
-    return color;
   }
 
   const bgfx::EmbeddedShader SweApp::shaders[] = {

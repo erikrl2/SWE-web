@@ -1,13 +1,12 @@
 #include <bgfx/bgfx.h>
 #include <bx/platform.h>
-#include <GLFW/glfw3.h>
-
-#ifdef __EMSCRIPTEN__
-#include <emscripten/emscripten.h>
-#include <emscripten/html5.h>
-#endif
-
 #include <string>
+
+#include "Types/Vec.hpp"
+
+// TODO: Fix emscripten build again (do forward declarations)
+
+struct GLFWwindow;
 
 int main(int argc, char** argv);
 
@@ -24,15 +23,17 @@ namespace Core {
 
     virtual void onResize(int width, int height)      = 0;
     virtual void onKeyPressed(int key)                = 0;
+    virtual void onMouseScrolled(float dx, float dy)  = 0;
     virtual void onFileDropped(std::string_view path) = 0;
+
+    GLFWwindow* getWindow() const { return m_window; }
 
   public:
     static Application* get() { return s_app; }
 
   protected:
     std::string m_title;
-    int         m_windowWidth;
-    int         m_windowHeight;
+    Vec2i       m_windowSize;
 
     GLFWwindow* m_window;
 
@@ -52,6 +53,7 @@ namespace Core {
 
     static void glfwFramebufferSizeCallback(GLFWwindow* window, int width, int height);
     static void glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
     static void glfwDropCallback(GLFWwindow* window, int count, const char** paths);
 
   private:

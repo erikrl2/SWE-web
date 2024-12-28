@@ -5,6 +5,7 @@
 #include "Camera.hpp"
 #include "Core/Application.hpp"
 #include "Types/Float2D.hpp"
+#include "Types/Vec.hpp"
 
 namespace App {
 
@@ -27,7 +28,6 @@ namespace App {
   };
 
   enum class ViewType { H, Hu, Hv, B, HPlusB, Count };
-  enum class UtilIndex { Min, Max, ValueScale };
 
   class SweApp: public Core::Application {
   public:
@@ -40,6 +40,7 @@ namespace App {
 
     void onResize(int width, int height) override;
     void onKeyPressed(int key) override;
+    void onMouseScrolled(float dx, float dy) override;
     void onFileDropped(std::string_view path) override;
 
   private:
@@ -49,14 +50,8 @@ namespace App {
     void setBlockBoundaryType();
     void rescaleToDataRange();
 
-    void updateCamera();
+    void updateCamera(float dt);
     void updateGrid();
-
-  private:
-    static std::string scenarioTypeToString(ScenarioType type);
-    static std::string viewTypeToString(ViewType type);
-    static std::string boundaryTypeToString(BoundaryType type);
-    static uint32_t    colorToInt(float* color4);
 
   private:
     bgfx::ProgramHandle m_program;
@@ -75,21 +70,21 @@ namespace App {
     std::vector<CellVertex> m_vertices;
     std::vector<uint32_t>   m_indices;
 
-    float m_gridData[4]    = {};
-    float m_boundaryPos[4] = {};
-    float m_util[4]        = {};
-    float m_color[4]       = {1.0f, 1.0f, 1.0f, 1.0f};
+    Vec4f m_gridData;
+    Vec4f m_boundaryPos;
+    Vec4f m_util;
+    Vec4f m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
     std::vector<float> m_heightMapData;
 
-    float m_cameraClipping[2] = {0.1f, 1000.0f};
-    float m_clearColor[4]     = {0.16f, 0.17f, 0.19f, 1.0f};
+    Vec2f m_cameraClipping;
+    Vec4f m_clearColor = {0.16f, 0.17f, 0.19f, 1.0f};
 
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
 
-    ScenarioType m_scenarioType  = ScenarioType::None;
-    int          m_dimensions[2] = {};
+    ScenarioType m_scenarioType = ScenarioType::None;
+    Vec2i        m_dimensions;
 
     ViewType     m_viewType          = ViewType::H;
     BoundaryType m_boundaryType      = BoundaryType::Outflow;
@@ -104,7 +99,7 @@ namespace App {
     bool  m_playing        = false;
     float m_simulationTime = 0.0;
 
-    Camera m_camera;
+    Camera m_camera{Camera::Type::Orthographic, m_windowSize, m_boundaryPos, m_cameraClipping};
 
     uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
@@ -112,7 +107,7 @@ namespace App {
 
     bool         m_showControls          = true;
     bool         m_showScenarioSelection = false;
-    int          m_selectedDimensions[2] = {100, 100};
+    Vec2i        m_selectedDimensions    = {100, 100};
     ScenarioType m_selectedScenarioType  = ScenarioType::ArtificialTsunami;
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;

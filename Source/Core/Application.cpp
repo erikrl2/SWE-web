@@ -1,10 +1,14 @@
 #include "Application.hpp"
 
 #include <bgfx/platform.h>
+#include <GLFW/glfw3.h>
 
 #include "ImGui/ImGuiBgfx.hpp"
 
-#ifndef __EMSCRIPTEN__
+#ifdef __EMSCRIPTEN__
+#include <emscripten/emscripten.h>
+#include <emscripten/html5.h>
+#else
 #if BX_PLATFORM_LINUX
 #define GLFW_EXPOSE_NATIVE_X11
 #elif BX_PLATFORM_WINDOWS
@@ -21,8 +25,7 @@ namespace Core {
 
   Application::Application(const std::string& title, int width, int height):
     m_title(title),
-    m_windowWidth(width),
-    m_windowHeight(height),
+    m_windowSize(width, height),
     m_mainView(0) {
     if (s_app) {
       assert(false);
@@ -38,7 +41,7 @@ namespace Core {
     }
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    m_window = glfwCreateWindow(m_windowWidth, m_windowHeight, m_title.c_str(), NULL, NULL);
+    m_window = glfwCreateWindow(m_windowSize.x, m_windowSize.y, m_title.c_str(), NULL, NULL);
     if (!m_window) {
       std::cerr << "Failed to create GLFW window" << std::endl;
       return;
@@ -51,6 +54,7 @@ namespace Core {
 #endif
 
     glfwSetKeyCallback(m_window, glfwKeyCallback);
+    glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
 
     bgfx::renderFrame(); // signals bgfx not to create a render thread
@@ -84,9 +88,9 @@ namespace Core {
     glfwSetWindowSize(s_app->m_window, (int)w, (int)h);
 #endif
 
-    glfwGetWindowSize(m_window, &m_windowWidth, &m_windowHeight);
-    bgfxInit.resolution.width  = (uint32_t)m_windowWidth;
-    bgfxInit.resolution.height = (uint32_t)m_windowHeight;
+    glfwGetWindowSize(m_window, &m_windowSize.x, &m_windowSize.y);
+    bgfxInit.resolution.width  = (uint32_t)m_windowSize.x;
+    bgfxInit.resolution.height = (uint32_t)m_windowSize.y;
     bgfxInit.resolution.reset  = BGFX_RESET_VSYNC;
 
     if (!bgfx::init(bgfxInit)) {
@@ -157,8 +161,8 @@ namespace Core {
     int width  = e->windowInnerWidth;
     int height = e->windowInnerHeight;
 
-    s_app->m_windowWidth  = width;
-    s_app->m_windowHeight = height;
+    s_app->m_windowSize.x = width;
+    s_app->m_windowSize.y = height;
 
     emscripten_set_canvas_element_size("#canvas", width, height);
     glfwSetWindowSize(s_app->m_window, width, height);
@@ -173,8 +177,8 @@ namespace Core {
 #endif
 
   void Application::glfwFramebufferSizeCallback(GLFWwindow*, int width, int height) {
-    s_app->m_windowWidth  = width;
-    s_app->m_windowHeight = height;
+    s_app->m_windowSize.x = width;
+    s_app->m_windowSize.y = height;
     bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
@@ -189,6 +193,8 @@ namespace Core {
       s_app->onKeyPressed(key);
     }
   }
+
+  void Application::glfwScrollCallback(GLFWwindow*, double xoffset, double yoffset) { s_app->onMouseScrolled(xoffset, yoffset); }
 
   void Application::glfwDropCallback(GLFWwindow*, int count, const char** paths) {
     for (int i = 0; i < count; ++i) {
