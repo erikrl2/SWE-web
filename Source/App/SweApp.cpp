@@ -165,7 +165,8 @@ namespace App {
     ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
 
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
-      m_cameraClipping[0] = std::min(m_cameraClipping[0], m_cameraClipping[1]);
+      m_cameraClipping.x = std::max(0.1f, std::min(m_cameraClipping.x, m_cameraClipping.y - 0.1f));
+      m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
     }
 
     ImGui::DragFloat("Value Scale", &m_util.z, 0.01f, 0.0f, 100.0f);
@@ -182,8 +183,13 @@ namespace App {
     }
 
     ImGui::SameLine();
-    if (ImGui::Checkbox("Lines", &m_showLines)) {
+    if (ImGui::Checkbox("Wireframe", &m_showLines)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Checkbox("3D", &m_cameraIs3D)) {
+      m_camera.switchType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
     }
 
 #ifndef __EMSCRIPTEN__
@@ -353,8 +359,10 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    m_util.z = 1.0f;
     rescaleToDataRange();
+    m_util.z           = 1.0f;
+    m_cameraClipping.y = (m_boundaryPos.w - m_boundaryPos.z) * 10.0f;
+    m_camera.setTarget(Vec3f{m_boundaryPos.x + m_boundaryPos.y, m_boundaryPos.z + m_boundaryPos.w, m_util.x + m_util.y} * 0.5f);
 
     m_endSimulationTime = 0.0;
 
@@ -395,16 +403,7 @@ namespace App {
 
     const RealType* values = nullptr;
 
-    // TODO: Move to Utils.hpp ?
-    if (m_viewType == ViewType::H) {
-      values = m_block->getWaterHeight().getData();
-    } else if (m_viewType == ViewType::Hu) {
-      values = m_block->getDischargeHu().getData();
-    } else if (m_viewType == ViewType::Hv) {
-      values = m_block->getDischargeHv().getData();
-    } else if (m_viewType == ViewType::B) {
-      values = m_block->getBathymetry().getData();
-    } else if (m_viewType == ViewType::HPlusB) {
+    if (m_viewType == ViewType::HPlusB) {
       const int size  = (m_dimensions.x + 2) * (m_dimensions.y + 2);
       RealType* hCopy = new RealType[size];
       memcpy(hCopy, m_block->getWaterHeight().getData(), size * sizeof(RealType));
@@ -413,15 +412,17 @@ namespace App {
         hCopy[i] += b[i];
       }
       values = hCopy;
+    } else {
+      values = getBlockValues(m_block, m_viewType).getData();
     }
 
-    auto [min, max]  = std::minmax_element(values, values + (m_dimensions.x + 2) * (m_dimensions.y + 2));
-    m_util.x         = (float)*min - 0.01f;
-    m_util.y         = (float)*max + 0.01f;
-    m_cameraClipping = {0.1f, (float)*max * m_util.z * 2.0f};
+    auto [min, max] = std::minmax_element(values, values + (m_dimensions.x + 2) * (m_dimensions.y + 2));
 
     if (m_viewType == ViewType::HPlusB)
       delete values;
+
+    m_util.x = (float)*min - 0.01f;
+    m_util.y = (float)*max + 0.01f;
   }
 
   void SweApp::updateCamera(float dt) {
@@ -455,21 +456,12 @@ namespace App {
       }
       bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
     } else {
-      const Float2D<RealType>* values = nullptr;
-      if (m_viewType == ViewType::H) {
-        values = &m_block->getWaterHeight();
-      } else if (m_viewType == ViewType::Hu) {
-        values = &m_block->getDischargeHu();
-      } else if (m_viewType == ViewType::Hv) {
-        values = &m_block->getDischargeHv();
-      } else if (m_viewType == ViewType::B) {
-        values = &m_block->getBathymetry();
-      }
+      const Float2D<RealType>& values = getBlockValues(m_block, m_viewType);
 
       m_heightMapData.resize(nx * ny);
       for (int j = 0; j < ny; j++) {
         for (int i = 0; i < nx; i++) {
-          m_heightMapData[j * nx + i] = (float)(*values)[j + 1][i + 1];
+          m_heightMapData[j * nx + i] = (float)values[j + 1][i + 1];
         }
       }
       bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));

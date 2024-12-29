@@ -77,8 +77,8 @@ namespace App {
 
     std::vector<float> m_heightMapData;
 
-    Vec2f m_cameraClipping;
-    Vec4f m_clearColor = {0.16f, 0.17f, 0.19f, 1.0f};
+    Vec2f m_cameraClipping = {0.1f, 1000.0f};
+    Vec4f m_clearColor     = {0.16f, 0.17f, 0.19f, 1.0f};
 
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
@@ -99,7 +99,7 @@ namespace App {
     bool  m_playing        = false;
     float m_simulationTime = 0.0;
 
-    Camera m_camera{Camera::Type::Orthographic, m_windowSize, m_boundaryPos, m_cameraClipping};
+    Camera m_camera{m_windowSize, m_boundaryPos, m_cameraClipping};
 
     uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
@@ -111,6 +111,7 @@ namespace App {
     ScenarioType m_selectedScenarioType  = ScenarioType::ArtificialTsunami;
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
+    bool         m_cameraIs3D            = m_camera.getType() == Camera::Type::Perspective;
 
   private:
     static const bgfx::EmbeddedShader shaders[];

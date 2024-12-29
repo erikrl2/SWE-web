@@ -62,4 +62,20 @@ namespace App {
     return color;
   }
 
+  const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type) {
+    switch (type) {
+    case ViewType::H:
+      return block->getWaterHeight();
+    case ViewType::Hu:
+      return block->getDischargeHu();
+    case ViewType::Hv:
+      return block->getDischargeHv();
+    case ViewType::B:
+      return block->getBathymetry();
+    default:
+      assert(false);
+    }
+    return block->getWaterHeight(); // dummy
+  }
+
 } // namespace App
