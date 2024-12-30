@@ -141,7 +141,7 @@ namespace App {
         BoundaryType type = (BoundaryType)i;
         if (ImGui::Selectable(boundaryTypeToString(type).c_str(), m_boundaryType == type)) {
           m_boundaryType = type;
-          setBlockBoundaryType();
+          setBlockBoundaryType(m_block, m_boundaryType);
         }
       }
       ImGui::EndCombo();
@@ -175,6 +175,17 @@ namespace App {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
     }
 
+    ImGui::SeparatorText("Camera");
+
+    if (ImGui::Checkbox("3D", &m_cameraIs3D)) {
+      m_camera.setType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button("Reset Camera")) {
+      m_camera.reset();
+    }
+
     ImGui::SeparatorText("Debug Options");
 
     if (ImGui::Checkbox("Stats", &m_showStats)) {
@@ -185,11 +196,6 @@ namespace App {
     ImGui::SameLine();
     if (ImGui::Checkbox("Wireframe", &m_showLines)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Checkbox("3D", &m_cameraIs3D)) {
-      m_camera.switchType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
     }
 
 #ifndef __EMSCRIPTEN__
@@ -230,6 +236,8 @@ namespace App {
   H/U/V/B/A : select view type
   O/W       : select boundary type
   Q         : auto rescale data range
+  T         : switch camera type
+  X         : reset camera
   L         : show lines
   I         : show stats
 )";
@@ -271,6 +279,7 @@ namespace App {
 #endif
 
       if (ImGui::Button("Load Scenario")) {
+        loadScenario();
       }
 
       ImGui::End(); // Scenario Selection
@@ -295,7 +304,7 @@ namespace App {
     m_simulationTime = 0.0;
     m_playing        = false;
 
-    setBlockBoundaryType();
+    setBlockBoundaryType(m_block, m_boundaryType);
   }
 
   void SweApp::loadBlock() {
@@ -361,8 +370,15 @@ namespace App {
 
     rescaleToDataRange();
     m_util.z           = 1.0f;
-    m_cameraClipping.y = (m_boundaryPos.w - m_boundaryPos.z) * 10.0f;
-    m_camera.setTarget(Vec3f{m_boundaryPos.x + m_boundaryPos.y, m_boundaryPos.z + m_boundaryPos.w, m_util.x + m_util.y} * 0.5f);
+    m_cameraClipping.x = 0.1f; // TODO: Adjust based on grid size or max zoom
+    m_cameraClipping.y = (float)std::max(right - left, top - bottom) * 10.0f;
+
+    // TODO: Redo on view type change
+    Vec3f center;
+    center.x = float(left + right) * 0.5f;
+    center.y = float(bottom + top) * 0.5f;
+    center.z = m_scenario->getWaterHeight(center.x, center.y);
+    m_camera.setTargetCenter(center);
 
     m_endSimulationTime = 0.0;
 
@@ -385,16 +401,6 @@ namespace App {
     m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
 
     m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
-  }
-
-  void SweApp::setBlockBoundaryType() {
-    if (!m_block)
-      return;
-
-    m_block->setBoundaryType(BoundaryEdge::Left, m_boundaryType);
-    m_block->setBoundaryType(BoundaryEdge::Right, m_boundaryType);
-    m_block->setBoundaryType(BoundaryEdge::Bottom, m_boundaryType);
-    m_block->setBoundaryType(BoundaryEdge::Top, m_boundaryType);
   }
 
   void SweApp::rescaleToDataRange() {
@@ -523,14 +529,21 @@ namespace App {
       break;
     case GLFW_KEY_O:
       m_boundaryType = BoundaryType::Outflow;
-      setBlockBoundaryType();
+      setBlockBoundaryType(m_block, m_boundaryType);
       break;
     case GLFW_KEY_W:
       m_boundaryType = BoundaryType::Wall;
-      setBlockBoundaryType();
+      setBlockBoundaryType(m_block, m_boundaryType);
       break;
     case GLFW_KEY_Q:
       rescaleToDataRange();
+      break;
+    case GLFW_KEY_T:
+      m_cameraIs3D = !m_cameraIs3D;
+      m_camera.setType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
+      break;
+    case GLFW_KEY_X:
+      m_camera.reset();
       break;
     case GLFW_KEY_L:
       m_showLines = !m_showLines;

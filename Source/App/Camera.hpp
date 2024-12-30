@@ -13,12 +13,13 @@ namespace App {
 
     Camera(const Vec2i& windowSize, const Vec4f& boundaryPos, const Vec2f& cameraClipping);
 
-    Type getType() const { return m_type; }
+    Type  getType() const { return m_type; }
+    Vec3f getTarget() const { return m_target; }
 
-    void switchType(Type type) { m_type = type; }
-
+    void setType(Type type) { m_type = type; }
     void setMouseOverUI(bool mouseOverUI) { m_mouseOverUI = mouseOverUI; }
-    void setTarget(const Vec3f& target) { m_target = target; }
+    void setTargetCenter(const Vec3f& target);
+    void reset();
 
     void update(float dt);
     void applyViewProjection();
@@ -26,8 +27,13 @@ namespace App {
     void onMouseScrolled(float delta);
 
   private:
-    void applyOrthographic();
-    void applyPerspective();
+    Vec3f forward();
+    Vec3f right();
+    Vec3f up();
+
+    void pan(const Vec2f& delta);
+    void rotate(const Vec2f& delta);
+    void zoom(float delta);
 
   private:
     Type m_type = Type::Perspective;
@@ -41,16 +47,11 @@ namespace App {
 
     bool m_mouseOverUI = false;
 
+    Vec3f m_targetCenter;
     Vec3f m_target;
-
-    // Orthographic camera state
-    float m_zoom = 1.0f;
-    Vec2f m_pan;
-
-    // Perspective camera state
-    float m_pitch    = 0.0f;
-    float m_yaw      = 0.0f;
-    float m_distance = 10.0f;
+    float m_pitch = 0.0f;
+    float m_yaw   = 0.0f;
+    float m_zoom  = 1.0f;
   };
 
 } // namespace App

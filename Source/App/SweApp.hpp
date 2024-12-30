@@ -47,7 +47,6 @@ namespace App {
     void loadScenario();
     void resetScenario();
     void loadBlock();
-    void setBlockBoundaryType();
     void rescaleToDataRange();
 
     void updateCamera(float dt);

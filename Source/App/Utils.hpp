@@ -25,4 +25,6 @@ namespace App {
 
   const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type);
 
+  void setBlockBoundaryType(Blocks::Block* block, BoundaryType type);
+
 } // namespace App

@@ -10,14 +10,25 @@ namespace App {
     m_boundaryPos(boundaryPos),
     m_cameraClipping(cameraClipping) {}
 
-  void Camera::update(float dt) {
-    bool leftButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+  void Camera::reset() {
+    m_target = {0, 0, 0};
+    m_yaw    = 0.0f;
+    m_pitch  = 0.0f;
+    m_zoom   = 1.0f;
+  }
 
-    if (leftButtonPressed && !m_draggingMouse && !m_mouseOverUI) {
+  void Camera::update(float) {
+    bool leftButtonPressed  = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+    bool rightButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+    bool middleButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
+
+    bool buttonPressed = leftButtonPressed || rightButtonPressed || middleButtonPressed;
+
+    if (buttonPressed && !m_draggingMouse && !m_mouseOverUI) {
       m_draggingMouse   = true;
       m_initialMousePos = Core::Input::getMousePosition();
       return;
-    } else if (!leftButtonPressed && m_draggingMouse) {
+    } else if (!buttonPressed && m_draggingMouse) {
       m_draggingMouse = false;
     }
 
@@ -28,103 +39,118 @@ namespace App {
 
       switch (m_type) {
       case Type::Orthographic: {
-        float scaleW = (m_boundaryPos[1] - m_boundaryPos[0]) / (float)m_windowSize.x;
-        float scaleH = (m_boundaryPos[3] - m_boundaryPos[2]) / (float)m_windowSize.y;
-        m_pan.x -= mouseDelta.x * m_zoom * scaleW;
-        m_pan.y += mouseDelta.y * m_zoom * scaleH;
+        if (leftButtonPressed || middleButtonPressed) {
+          pan(mouseDelta);
+        } else if (rightButtonPressed) {
+          zoom(mouseDelta.y);
+        }
         break;
       }
       case Type::Perspective: {
-        // TODO: FIX
-        // m_yaw -= mouseDelta.x * 0.1f * dt;
-        // m_pitch += mouseDelta.y * 0.1f * dt;
-        // m_pitch = bx::clamp(m_pitch, -bx::kPiHalf, bx::kPiHalf);
+        if (leftButtonPressed) {
+          rotate(mouseDelta);
+        } else if (middleButtonPressed) {
+          pan(mouseDelta);
+        } else if (rightButtonPressed) {
+          zoom(mouseDelta.y);
+        }
         break;
       }
       }
     }
   }
 
+  // TODO: Use quaternion for rotation
+  void Camera::pan(const Vec2f& delta) {
+    float scaleW = (m_boundaryPos.y - m_boundaryPos.x) / (float)m_windowSize.x;
+    float scaleH = (m_boundaryPos.w - m_boundaryPos.z) / (float)m_windowSize.y;
+    m_target -= right() * (delta.x * m_zoom * scaleW);
+    m_target += up() * (delta.y * m_zoom * scaleH);
+  }
+
+  void Camera::rotate(const Vec2f& delta) {
+    m_yaw -= delta.x * 0.01f;
+    m_pitch += delta.y * 0.01f;
+    m_pitch = bx::clamp(m_pitch, -bx::kPiHalf + 0.01f, bx::kPiHalf - 0.01f);
+  }
+
+  void Camera::zoom(float delta) {
+    // TODO: Set limit depending on far clip
+    m_zoom *= (1.0f - delta * 0.01f);
+    m_zoom = std::max(0.1f, m_zoom);
+  }
+
   void Camera::applyViewProjection() {
-    switch (m_type) {
-    case Type::Orthographic:
-      applyOrthographic();
-      break;
-    case Type::Perspective:
-      applyPerspective();
-      break;
+    float aspect       = (float)m_windowSize.x / (float)m_windowSize.y;
+    float domainWidth  = m_boundaryPos.y - m_boundaryPos.x;
+    float domainHeight = m_boundaryPos.w - m_boundaryPos.z;
+    float distance     = std::max(domainWidth, domainHeight) * m_zoom; // TODO: Check together with fov
+    Vec3f target       = m_target;
+
+    // trial and error magic
+    if (aspect > domainWidth / domainHeight) {
+      target.x *= aspect * domainHeight / domainWidth;
+      domainWidth = domainHeight * aspect;
+    } else {
+      target.y /= aspect * domainHeight / domainWidth;
+      domainHeight = domainWidth / aspect;
+      distance /= aspect;
+    }
+
+    target += m_targetCenter;
+    Vec3f eye = target + forward() * distance;
+
+    float view[16], proj[16];
+    bx::mtxLookAt(view, eye, target, {0.0f, 1.0f, 0.0f}, bx::Handedness::Right);
+
+    if (m_type == Type::Orthographic) {
+      Vec2f lower = Vec2f{domainWidth, domainHeight} * -0.5f * m_zoom;
+      Vec2f upper = Vec2f{domainWidth, domainHeight} * 0.5f * m_zoom;
+      bx::mtxOrtho(proj, lower.x, upper.x, lower.y, upper.y, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
+    } else {
+      float fov = 53.101f; // TODO: Auto adjust?
+      bx::mtxProj(proj, fov, aspect, m_cameraClipping.x, m_cameraClipping.y, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
+    }
+
+    bgfx::setViewTransform(0, view, proj);
+  }
+
+  Vec3f Camera::forward() {
+    if (m_type == Type::Orthographic) {
+      return {0.0f, 0.0f, 1.0f};
+    } else {
+      return {bx::cos(m_pitch) * bx::sin(m_yaw), bx::sin(m_pitch), bx::cos(m_pitch) * bx::cos(m_yaw)};
+    }
+  }
+
+  Vec3f Camera::right() {
+    if (m_type == Type::Orthographic) {
+      return {1.0f, 0.0f, 0.0f};
+    } else {
+      return {bx::cos(m_yaw), 0.0f, -bx::sin(m_yaw)};
+    }
+  }
+
+  Vec3f Camera::up() {
+    if (m_type == Type::Orthographic) {
+      return {0.0f, 1.0f, 0.0f};
+    } else {
+      return forward().cross(right());
     }
   }
 
   void Camera::onMouseScrolled(float delta) {
-    if (m_mouseOverUI) {
-      return;
-    }
-
-    switch (m_type) {
-    case Type::Orthographic: {
+    if (!m_mouseOverUI) {
       m_zoom *= (1.0f - delta * 0.1f);
+      // TODO: Set limit depending on far clip
       m_zoom = std::max(0.1f, m_zoom);
-      break;
-    }
-    case Type::Perspective: {
-      // TODO
-      // m_distance *= (1.0f - delta * 0.1f);
-      // m_distance = std::max(1.0f, m_distance);
-
-      m_zoom *= (1.0f - delta * 0.1f);
-      m_zoom = std::max(0.1f, m_zoom);
-      break;
-    }
     }
   }
 
-  void Camera::applyOrthographic() {
-    // TODO: Use view matrix from perspective camera
 
-    Vec2f lowerBound = m_boundaryPos.xz() * m_zoom + m_pan;
-    Vec2f upperBound = m_boundaryPos.yw() * m_zoom + m_pan;
-
-    float domainWidth  = upperBound.x - lowerBound.x;
-    float domainHeight = upperBound.y - lowerBound.y;
-
-    float aspect = (float)m_windowSize.x / (float)m_windowSize.y;
-
-    if (aspect > domainWidth / domainHeight) {
-      float width = domainHeight * aspect;
-      lowerBound.x += (domainWidth - width) * 0.5f;
-      upperBound.x = lowerBound.x + width;
-    } else {
-      float height = domainWidth / aspect;
-      lowerBound.y += (domainHeight - height) * 0.5f;
-      upperBound.y = lowerBound.y + height;
-    }
-
-    float proj[16];
-    bx::mtxOrtho(
-      proj, lowerBound.x, upperBound.x, lowerBound.y, upperBound.y, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Left
-    );
-    bgfx::setViewTransform(0, nullptr, proj);
-  }
-
-  void Camera::applyPerspective() {
-    float domainHeight = m_boundaryPos.w - m_boundaryPos.z;
-
-    bx::Vec3 eye    = {m_target.x, m_target.y, m_target.z + domainHeight * m_zoom};
-    bx::Vec3 target = {m_target.x, m_target.y, m_target.z};
-    bx::Vec3 up     = {0.0f, 1.0f, 0.0f};
-
-    float fov       = 60.0f;
-    float aspect    = (float)m_windowSize.x / (float)m_windowSize.y;
-    float nearPlane = m_cameraClipping[0];
-    float farPlane  = m_cameraClipping[1];
-
-    float view[16], proj[16];
-    bx::mtxLookAt(view, eye, target, up, bx::Handedness::Right);
-    bx::mtxProj(proj, fov, aspect, nearPlane, farPlane, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
-    bgfx::setViewTransform(0, view, proj);
-
-    std::cout << "eye: " << eye.x << ", " << eye.y << ", " << eye.z << " - " << "target: " << target.x << ", " << target.y << ", " << target.z << std::endl;
+  void Camera::setTargetCenter(const Vec3f& target) {
+    m_targetCenter = target;
+    reset();
   }
 
 } // namespace App

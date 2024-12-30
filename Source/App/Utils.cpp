@@ -78,4 +78,14 @@ namespace App {
     return block->getWaterHeight(); // dummy
   }
 
+
+  void setBlockBoundaryType(Blocks::Block* block, BoundaryType type) {
+    if (block) {
+      block->setBoundaryType(BoundaryEdge::Left, type);
+      block->setBoundaryType(BoundaryEdge::Right, type);
+      block->setBoundaryType(BoundaryEdge::Bottom, type);
+      block->setBoundaryType(BoundaryEdge::Top, type);
+    }
+  }
+
 } // namespace App
