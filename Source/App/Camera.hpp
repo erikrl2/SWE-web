@@ -18,7 +18,8 @@ namespace App {
 
     void setType(Type type) { m_type = type; }
     void setMouseOverUI(bool mouseOverUI) { m_mouseOverUI = mouseOverUI; }
-    void setTargetCenter(const Vec3f& target);
+    void setTargetCenter(const Vec3f& center) { m_targetCenter = center; }
+
     void reset();
 
     void update(float dt);
@@ -33,7 +34,7 @@ namespace App {
 
     void pan(const Vec2f& delta);
     void rotate(const Vec2f& delta);
-    void zoom(float delta);
+    void zoom(float deltaY);
 
   private:
     Type m_type = Type::Perspective;

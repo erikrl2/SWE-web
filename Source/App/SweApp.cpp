@@ -131,6 +131,7 @@ namespace App {
         if (ImGui::Selectable(viewTypeToString(type).c_str(), m_viewType == type)) {
           m_viewType = type;
           rescaleToDataRange();
+          setupCamera();
         }
       }
       ImGui::EndCombo();
@@ -169,7 +170,9 @@ namespace App {
       m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
     }
 
-    ImGui::DragFloat("Value Scale", &m_util.z, 0.01f, 0.0f, 100.0f);
+    if (ImGui::DragFloat("Value Scale", &m_util.z, 0.01f, 0.0f, 100.0f)) {
+      setupCamera();
+    }
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
@@ -369,16 +372,9 @@ namespace App {
     m_block->setGhostLayer();
 
     rescaleToDataRange();
-    m_util.z           = 1.0f;
-    m_cameraClipping.x = 0.1f; // TODO: Adjust based on grid size or max zoom
-    m_cameraClipping.y = (float)std::max(right - left, top - bottom) * 10.0f;
-
-    // TODO: Redo on view type change
-    Vec3f center;
-    center.x = float(left + right) * 0.5f;
-    center.y = float(bottom + top) * 0.5f;
-    center.z = m_scenario->getWaterHeight(center.x, center.y);
-    m_camera.setTargetCenter(center);
+    m_util.z = 1.0f;
+    m_camera.reset();
+    setupCamera();
 
     m_endSimulationTime = 0.0;
 
@@ -429,6 +425,27 @@ namespace App {
 
     m_util.x = (float)*min - 0.01f;
     m_util.y = (float)*max + 0.01f;
+  }
+
+  void SweApp::setupCamera() {
+    float left   = m_boundaryPos.x;
+    float right  = m_boundaryPos.y;
+    float bottom = m_boundaryPos.z;
+    float top    = m_boundaryPos.w;
+
+    Vec3f center;
+    center.x = (left + right) * 0.5f;
+    center.y = (bottom + top) * 0.5f;
+    center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.z;
+    m_camera.setTargetCenter(center);
+
+    float maxDim  = std::max(right - left, top - bottom);
+    float maxDist = m_util.y - m_util.x;
+
+    m_cameraClipping.x = std::min(m_gridData.z, m_gridData.w) * 0.1f;
+    m_cameraClipping.y = maxDim * 10.0f + std::max(maxDim, maxDist);
+    m_cameraClipping.x = std::max(0.1f, std::min(m_cameraClipping.x, m_cameraClipping.y - 0.1f));
+    m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
   }
 
   void SweApp::updateCamera(float dt) {
@@ -510,22 +527,27 @@ namespace App {
     case GLFW_KEY_H:
       m_viewType = ViewType::H;
       rescaleToDataRange();
+      setupCamera();
       break;
     case GLFW_KEY_U:
       m_viewType = ViewType::Hu;
       rescaleToDataRange();
+      setupCamera();
       break;
     case GLFW_KEY_V:
       m_viewType = ViewType::Hv;
       rescaleToDataRange();
+      setupCamera();
       break;
     case GLFW_KEY_B:
       m_viewType = ViewType::B;
       rescaleToDataRange();
+      setupCamera();
       break;
     case GLFW_KEY_A:
       m_viewType = ViewType::HPlusB;
       rescaleToDataRange();
+      setupCamera();
       break;
     case GLFW_KEY_O:
       m_boundaryType = BoundaryType::Outflow;

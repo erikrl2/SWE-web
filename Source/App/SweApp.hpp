@@ -48,6 +48,7 @@ namespace App {
     void resetScenario();
     void loadBlock();
     void rescaleToDataRange();
+    void setupCamera();
 
     void updateCamera(float dt);
     void updateGrid();
@@ -69,9 +70,9 @@ namespace App {
     std::vector<CellVertex> m_vertices;
     std::vector<uint32_t>   m_indices;
 
-    Vec4f m_gridData;
-    Vec4f m_boundaryPos;
-    Vec4f m_util;
+    Vec4f m_gridData;    // x: nx, y: ny, z: dx, w: dy
+    Vec4f m_boundaryPos; // x: left, y: right, z: bottom, w: top
+    Vec4f m_util;        // x: minVal, y: maxVal, z: valueScale
     Vec4f m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
     std::vector<float> m_heightMapData;

@@ -62,6 +62,24 @@ namespace App {
     return color;
   }
 
+  RealType getScenarioValue(const Scenarios::Scenario* scenario, ViewType type, RealType x, RealType y) {
+    switch (type) {
+    case ViewType::H:
+      return scenario->getWaterHeight(x, y);
+    case ViewType::Hu:
+      return scenario->getMomentumU(x, y);
+    case ViewType::Hv:
+      return scenario->getMomentumV(x, y);
+    case ViewType::B:
+      return scenario->getBathymetry(x, y);
+    case ViewType::HPlusB:
+      return scenario->getWaterHeight(x, y) + scenario->getBathymetry(x, y);
+    default:
+      assert(false);
+    }
+    return 0; // dummy
+  }
+
   const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type) {
     switch (type) {
     case ViewType::H:

@@ -3,14 +3,10 @@
 #include <cstdint>
 #include <string>
 
+#include "Blocks/Block.hpp"
+#include "Types/BoundaryType.hpp"
 #include "Types/Float2D.hpp"
 #include "Types/RealType.hpp"
-
-enum class BoundaryType;
-
-namespace Blocks {
-  class Block;
-} // namespace Blocks
 
 namespace App {
 
@@ -22,6 +18,8 @@ namespace App {
   std::string boundaryTypeToString(BoundaryType type);
 
   uint32_t colorToInt(float* color4);
+
+  RealType getScenarioValue(const Scenarios::Scenario* scenario, ViewType type, RealType x, RealType y);
 
   const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type);
 

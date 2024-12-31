@@ -18,8 +18,8 @@ namespace App {
   }
 
   void Camera::update(float) {
-    bool leftButtonPressed  = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
-    bool rightButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
+    bool leftButtonPressed   = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
+    bool rightButtonPressed  = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
     bool middleButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
 
     bool buttonPressed = leftButtonPressed || rightButtonPressed || middleButtonPressed;
@@ -60,7 +60,6 @@ namespace App {
     }
   }
 
-  // TODO: Use quaternion for rotation
   void Camera::pan(const Vec2f& delta) {
     float scaleW = (m_boundaryPos.y - m_boundaryPos.x) / (float)m_windowSize.x;
     float scaleH = (m_boundaryPos.w - m_boundaryPos.z) / (float)m_windowSize.y;
@@ -74,27 +73,34 @@ namespace App {
     m_pitch = bx::clamp(m_pitch, -bx::kPiHalf + 0.01f, bx::kPiHalf - 0.01f);
   }
 
-  void Camera::zoom(float delta) {
-    // TODO: Set limit depending on far clip
-    m_zoom *= (1.0f - delta * 0.01f);
+  void Camera::zoom(float deltaY) {
+    m_zoom *= (1.0f - deltaY * 0.01f);
     m_zoom = std::max(0.1f, m_zoom);
+    m_zoom = std::min(10.0f, m_zoom);
+  }
+
+  void Camera::onMouseScrolled(float delta) {
+    if (!m_mouseOverUI) {
+      zoom(delta * 10.0f);
+    }
   }
 
   void Camera::applyViewProjection() {
     float aspect       = (float)m_windowSize.x / (float)m_windowSize.y;
     float domainWidth  = m_boundaryPos.y - m_boundaryPos.x;
     float domainHeight = m_boundaryPos.w - m_boundaryPos.z;
-    float distance     = std::max(domainWidth, domainHeight) * m_zoom; // TODO: Check together with fov
+    float distance     = m_zoom;
     Vec3f target       = m_target;
 
-    // trial and error magic
+    // dont even try to understand this
     if (aspect > domainWidth / domainHeight) {
       target.x *= aspect * domainHeight / domainWidth;
       domainWidth = domainHeight * aspect;
+      distance *= domainHeight;
     } else {
       target.y /= aspect * domainHeight / domainWidth;
       domainHeight = domainWidth / aspect;
-      distance /= aspect;
+      distance *= domainWidth / aspect;
     }
 
     target += m_targetCenter;
@@ -108,7 +114,7 @@ namespace App {
       Vec2f upper = Vec2f{domainWidth, domainHeight} * 0.5f * m_zoom;
       bx::mtxOrtho(proj, lower.x, upper.x, lower.y, upper.y, m_cameraClipping[0], m_cameraClipping[1], 0, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
     } else {
-      float fov = 53.101f; // TODO: Auto adjust?
+      float fov = 53.101f; // for seamless transition between ortho and perspective
       bx::mtxProj(proj, fov, aspect, m_cameraClipping.x, m_cameraClipping.y, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
     }
 
@@ -137,20 +143,6 @@ namespace App {
     } else {
       return forward().cross(right());
     }
-  }
-
-  void Camera::onMouseScrolled(float delta) {
-    if (!m_mouseOverUI) {
-      m_zoom *= (1.0f - delta * 0.1f);
-      // TODO: Set limit depending on far clip
-      m_zoom = std::max(0.1f, m_zoom);
-    }
-  }
-
-
-  void Camera::setTargetCenter(const Vec3f& target) {
-    m_targetCenter = target;
-    reset();
   }
 
 } // namespace App
