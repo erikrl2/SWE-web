@@ -80,22 +80,23 @@ namespace App {
     return 0; // dummy
   }
 
-  const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type) {
+  RealType getBlockValue(const Blocks::Block* block, ViewType type, int i, int j) {
     switch (type) {
     case ViewType::H:
-      return block->getWaterHeight();
+      return block->getWaterHeight()[j + 1][i + 1];
     case ViewType::Hu:
-      return block->getDischargeHu();
+      return block->getDischargeHu()[j + 1][i + 1];
     case ViewType::Hv:
-      return block->getDischargeHv();
+      return block->getDischargeHv()[j + 1][i + 1];
     case ViewType::B:
-      return block->getBathymetry();
+      return block->getBathymetry()[j + 1][i + 1];
+    case ViewType::HPlusB:
+      return block->getWaterHeight()[j + 1][i + 1] + block->getBathymetry()[j + 1][i + 1];
     default:
       assert(false);
     }
-    return block->getWaterHeight(); // dummy
+    return 0; // dummy
   }
-
 
   void setBlockBoundaryType(Blocks::Block* block, BoundaryType type) {
     if (block) {
@@ -105,5 +106,9 @@ namespace App {
       block->setBoundaryType(BoundaryEdge::Top, type);
     }
   }
+
+  Vec3f toVec3f(bx::Vec3 v) { return {v.x, v.y, v.z}; }
+
+  bx::Vec3 toBxVec3(Vec3f v) { return {v.x, v.y, v.z}; }
 
 } // namespace App

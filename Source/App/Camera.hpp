@@ -14,15 +14,18 @@ namespace App {
     Camera(const Vec2i& windowSize, const Vec4f& boundaryPos, const Vec2f& cameraClipping);
 
     Type  getType() const { return m_type; }
-    Vec3f getTarget() const { return m_target; }
+    Vec3f getTargetCenter() const { return m_targetCenter; }
+    Vec3f getTargetOffset() const { return m_targetOffset; }
+    float getZoom() const { return m_zoom; }
 
     void setType(Type type) { m_type = type; }
     void setMouseOverUI(bool mouseOverUI) { m_mouseOverUI = mouseOverUI; }
-    void setTargetCenter(const Vec3f& center) { m_targetCenter = center; }
+    void setTargetCenter(Vec3f center) { m_targetCenter = center; }
 
     void reset();
+    void recenter();
 
-    void update(float dt);
+    void update();
     void applyViewProjection();
 
     void onMouseScrolled(float delta);
@@ -32,8 +35,8 @@ namespace App {
     Vec3f right();
     Vec3f up();
 
-    void pan(const Vec2f& delta);
-    void rotate(const Vec2f& delta);
+    void pan(Vec2f delta);
+    void rotate(Vec2f delta);
     void zoom(float deltaY);
 
   private:
@@ -49,10 +52,17 @@ namespace App {
     bool m_mouseOverUI = false;
 
     Vec3f m_targetCenter;
-    Vec3f m_target;
-    float m_pitch = 0.0f;
-    float m_yaw   = 0.0f;
-    float m_zoom  = 1.0f;
+    Vec3f m_targetOffset;
+
+    float m_zoom = 1.0f;
+
+    bx::Quaternion m_orientation = bx::InitIdentity;
+
+  private:
+    const float MinZoom     = 0.1f;
+    const float MaxZoom     = 10.0f;
+    const float ZoomSpeed   = 0.005f;
+    const float RotateSpeed = 0.005f;
   };
 
 } // namespace App

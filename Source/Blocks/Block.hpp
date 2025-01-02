@@ -86,33 +86,6 @@ namespace Blocks {
      */
     void setBoundaryBathymetry();
 
-    // Synchronization Methods
-    /**
-     * Updates all temporary and non-local (for heterogeneous computing) variables
-     * after an external update of the main variables h, hu, hv, and b.
-     */
-    virtual void synchAfterWrite();
-    virtual void synchWaterHeightAfterWrite();
-    virtual void synchDischargeAfterWrite();
-    virtual void synchBathymetryAfterWrite();
-
-    /**
-     * Updates the ghost layers (only for BoundaryType::Connect and BoundaryType::Passive conditions)
-     * after an external update of the main variables h, hu, hv, and b in the
-     * ghost layer.
-     */
-    virtual void synchGhostLayerAfterWrite();
-
-    /**
-     * Updates all temporary and non-local (for heterogeneous computing) variables
-     * before an external access to the main variables h, hu, hv, and b.
-     */
-    virtual void synchBeforeRead();
-    virtual void synchWaterHeightBeforeRead();
-    virtual void synchDischargeBeforeRead();
-    virtual void synchBathymetryBeforeRead();
-    virtual void synchCopyLayerBeforeRead();
-
     /// Sets boundary conditions in ghost layers (set boundary conditions)
     /**
      * Sets the values of all ghost cells depending on the specifed
@@ -174,10 +147,10 @@ namespace Blocks {
     void setBathymetry(RealType (*b)(RealType, RealType));
 
     // Read access to arrays of unknowns
-    const Float2D<RealType>& getWaterHeight();
-    const Float2D<RealType>& getDischargeHu();
-    const Float2D<RealType>& getDischargeHv();
-    const Float2D<RealType>& getBathymetry();
+    const Float2D<RealType>& getWaterHeight() const;
+    const Float2D<RealType>& getDischargeHu() const;
+    const Float2D<RealType>& getDischargeHv() const;
+    const Float2D<RealType>& getBathymetry() const;
 
     /**
      * Sets the boundary type for specific block boundary.

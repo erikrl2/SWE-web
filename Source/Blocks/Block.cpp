@@ -78,9 +78,6 @@ void Blocks::Block::initialiseScenario(RealType offsetX, RealType offsetY, const
   setBoundaryType(BoundaryEdge::Right, scenario.getBoundaryType(BoundaryEdge::Right));
   setBoundaryType(BoundaryEdge::Bottom, scenario.getBoundaryType(BoundaryEdge::Bottom));
   setBoundaryType(BoundaryEdge::Top, scenario.getBoundaryType(BoundaryEdge::Top));
-
-  // Perform update after external write to variables
-  synchAfterWrite();
 }
 
 void Blocks::Block::setWaterHeight(RealType (*h)(RealType, RealType)) {
@@ -89,8 +86,6 @@ void Blocks::Block::setWaterHeight(RealType (*h)(RealType, RealType)) {
       h_[j][i] = h(offsetX_ + (i - RealType(0.5)) * dx_, offsetY_ + (j - RealType(0.5)) * dy_);
     }
   }
-
-  synchWaterHeightAfterWrite();
 }
 
 void Blocks::Block::setDischarge(RealType (*u)(RealType, RealType), RealType (*v)(RealType, RealType)) {
@@ -102,8 +97,6 @@ void Blocks::Block::setDischarge(RealType (*u)(RealType, RealType), RealType (*v
       hv_[j][i]  = v(x, y) * h_[j][i];
     };
   }
-
-  synchDischargeAfterWrite();
 }
 
 void Blocks::Block::setBathymetry(RealType b) {
@@ -112,8 +105,6 @@ void Blocks::Block::setBathymetry(RealType b) {
       b_[j][i] = b;
     }
   }
-
-  synchBathymetryAfterWrite();
 }
 
 void Blocks::Block::setBathymetry(RealType (*b)(RealType, RealType)) {
@@ -122,29 +113,15 @@ void Blocks::Block::setBathymetry(RealType (*b)(RealType, RealType)) {
       b_[j][i] = b(offsetX_ + (i - RealType(0.5)) * dx_, offsetY_ + (j - RealType(0.5)) * dy_);
     }
   }
-
-  synchBathymetryAfterWrite();
 }
 
-const Float2D<RealType>& Blocks::Block::getWaterHeight() {
-  synchWaterHeightBeforeRead();
-  return h_;
-}
+const Float2D<RealType>& Blocks::Block::getWaterHeight() const { return h_; }
 
-const Float2D<RealType>& Blocks::Block::getDischargeHu() {
-  synchDischargeBeforeRead();
-  return hu_;
-}
+const Float2D<RealType>& Blocks::Block::getDischargeHu() const { return hu_; }
 
-const Float2D<RealType>& Blocks::Block::getDischargeHv() {
-  synchDischargeBeforeRead();
-  return hv_;
-}
+const Float2D<RealType>& Blocks::Block::getDischargeHv() const { return hv_; }
 
-const Float2D<RealType>& Blocks::Block::getBathymetry() {
-  synchBathymetryBeforeRead();
-  return b_;
-}
+const Float2D<RealType>& Blocks::Block::getBathymetry() const { return b_; }
 
 void Blocks::Block::simulateTimeStep(RealType dt) {
   computeNumericalFluxes();
@@ -200,19 +177,9 @@ void Blocks::Block::setBoundaryBathymetry() {
   b_[0][nx_ + 1]       = b_[1][nx_];
   b_[ny_ + 1][0]       = b_[ny_][1];
   b_[ny_ + 1][nx_ + 1] = b_[ny_][nx_];
-
-  // Synchronize after an external update of the bathymetry
-  synchBathymetryAfterWrite();
 }
 
-void Blocks::Block::setGhostLayer() {
-  // std::cout << "Set simple boundary conditions " << std::endl << std::flush;
-  //  Call to virtual function to set ghost layer values
-  setBoundaryConditions();
-
-  //  Synchronize the ghost layers with accelerator memory
-  synchGhostLayerAfterWrite();
-}
+void Blocks::Block::setGhostLayer() { setBoundaryConditions(); }
 
 void Blocks::Block::computeMaxTimeStep(const RealType dryTol, const RealType cfl) {
   // Initialize the maximum wave speed
@@ -245,37 +212,7 @@ void Blocks::Block::computeMaxTimeStep(const RealType dryTol, const RealType cfl
 
 RealType Blocks::Block::getMaxTimeStep() const { return maxTimeStep_; }
 
-void Blocks::Block::synchAfterWrite() {
-  synchWaterHeightAfterWrite();
-  synchDischargeAfterWrite();
-  synchBathymetryAfterWrite();
-}
-
-void Blocks::Block::synchWaterHeightAfterWrite() {}
-
-void Blocks::Block::synchDischargeAfterWrite() {}
-
-void Blocks::Block::synchBathymetryAfterWrite() {}
-
-void Blocks::Block::synchGhostLayerAfterWrite() {}
-
-void Blocks::Block::synchBeforeRead() {
-  synchWaterHeightBeforeRead();
-  synchDischargeBeforeRead();
-  synchBathymetryBeforeRead();
-}
-
-void Blocks::Block::synchWaterHeightBeforeRead() {}
-
-void Blocks::Block::synchDischargeBeforeRead() {}
-
-void Blocks::Block::synchBathymetryBeforeRead() {}
-
-void Blocks::Block::synchCopyLayerBeforeRead() {}
-
 void Blocks::Block::setBoundaryConditions() {
-  // BoundaryType::Passive conditions need to be set by the component using Blocks::Block
-
   // Left boundary
   switch (boundary_[BoundaryEdge::Left]) {
   case BoundaryType::Wall: {

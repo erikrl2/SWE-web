@@ -1,5 +1,6 @@
 #pragma once
 
+#include <bx/math.h>
 #include <cstdint>
 #include <string>
 
@@ -7,6 +8,7 @@
 #include "Types/BoundaryType.hpp"
 #include "Types/Float2D.hpp"
 #include "Types/RealType.hpp"
+#include "Types/Vec.hpp"
 
 namespace App {
 
@@ -21,8 +23,11 @@ namespace App {
 
   RealType getScenarioValue(const Scenarios::Scenario* scenario, ViewType type, RealType x, RealType y);
 
-  const Float2D<RealType>& getBlockValues(Blocks::Block* block, ViewType type);
+  RealType getBlockValue(const Blocks::Block* block, ViewType type, int i, int j);
 
   void setBlockBoundaryType(Blocks::Block* block, BoundaryType type);
+
+  Vec3f    toVec3f(bx::Vec3 v);
+  bx::Vec3 toBxVec3(Vec3f v);
 
 } // namespace App

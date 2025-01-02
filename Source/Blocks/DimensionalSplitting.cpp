@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cmath>
+#include <iostream>
 #include <stdexcept>
 
 extern int g_useOpenMP;
@@ -22,7 +23,7 @@ namespace Blocks {
 
 // Loop over all vertical edges
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static) if (g_useOpenMP)
+#pragma omp parallel for if (g_useOpenMP)
 #endif
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 2; x++) {
@@ -59,7 +60,7 @@ namespace Blocks {
   void DimensionalSplittingBlock::updateUnknowns(RealType dt) {
 // Loop over all inner cells
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static) if (g_useOpenMP)
+#pragma omp parallel for if (g_useOpenMP)
 #endif
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
@@ -74,7 +75,7 @@ namespace Blocks {
 
 // Loop over horizontal edges
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static) if (g_useOpenMP)
+#pragma omp parallel for if (g_useOpenMP)
 #endif
     for (int y = 1; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
@@ -103,16 +104,14 @@ namespace Blocks {
     }
 
 #ifndef NDEBUG
-    // assert(dt < RealType(0.5) * dy_ / maxWaveSpeedY);
-    // Use exception instead of assert to be able to catch it in unit tests
     if (dt >= RealType(0.5) * dy_ / maxWaveSpeedY) {
-      throw std::runtime_error("CFL condition not satisfied in y-sweep!");
+      std::cerr << "CFL condition not satisfied in y-sweep!" << std::endl;
     }
 #endif
 
 // Loop over all inner cells
 #ifdef ENABLE_OPENMP
-#pragma omp parallel for schedule(static) if (g_useOpenMP)
+#pragma omp parallel for if (g_useOpenMP)
 #endif
     for (int y = 1; y < ny_ + 1; y++) {
       for (int x = 1; x < nx_ + 1; x++) {

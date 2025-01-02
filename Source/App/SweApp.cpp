@@ -47,7 +47,7 @@ namespace App {
   }
 
   SweApp::~SweApp() {
-    if (m_scenario) {
+    if (isBlockLoaded()) {
       delete m_scenario;
       delete m_block;
       bgfx::destroy(m_vbh);
@@ -65,37 +65,11 @@ namespace App {
   }
 
   void SweApp::update(float dt) {
-    bgfx::touch(0); // clears window if nothing is submitted
-
-    updateCamera(dt);
-
-    if (m_block && m_playing) {
-      m_block->setGhostLayer();
-
-      RealType scaleFactor = RealType(std::min(dt * m_timeScale, 1.0f));
-
-#if 1 // First option needs more computation but is more stable for grids with non-square cells
-      m_block->computeMaxTimeStep();
-      RealType maxTimeStep = m_block->getMaxTimeStep();
-      maxTimeStep *= scaleFactor;
-      m_block->simulateTimeStep(maxTimeStep);
-#else
-      m_block->computeNumericalFluxes();
-      RealType maxTimeStep = m_block->getMaxTimeStep();
-      maxTimeStep *= scaleFactor;
-      m_block->updateUnknowns(maxTimeStep);
-#endif
-
-      m_simulationTime += (float)maxTimeStep;
-
-      if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
-        m_playing = false;
-      }
-    }
-
+    simulate(dt);
     updateGrid();
-
-    bgfx::frame();
+    updateControls(dt);
+    updateCamera();
+    render();
   }
 
   void SweApp::updateImGui(float dt) {
@@ -113,8 +87,8 @@ namespace App {
 
     ImGui::SameLine();
     ImGui::Text("%s (%dx%d)", scenarioTypeToString(m_scenarioType).c_str(), m_dimensions.x, m_dimensions.y);
-    if (ImGui::Button("Reset")) {
-      resetScenario();
+    if (ImGui::Button("Reset##ResetSimulation")) {
+      resetSimulation();
     }
 
     ImGui::SameLine();
@@ -129,9 +103,7 @@ namespace App {
       for (int i = 0; i < (int)ViewType::Count; i++) {
         ViewType type = (ViewType)i;
         if (ImGui::Selectable(viewTypeToString(type).c_str(), m_viewType == type)) {
-          m_viewType = type;
-          rescaleToDataRange();
-          setupCamera();
+          switchView(type);
         }
       }
       ImGui::EndCombo();
@@ -148,30 +120,36 @@ namespace App {
       ImGui::EndCombo();
     }
 
-    ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt);
+    ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt, "%.1f");
 
-    ImGui::DragFloat("End Simulation Time", &m_endSimulationTime, 1.0f, 0.0f, std::numeric_limits<float>::max());
+    ImGui::DragFloat("End Simulation Time", &m_endSimulationTime, 0.5f, 0.0f, std::numeric_limits<float>::max(), "%.1f");
 
     ImGui::SeparatorText("Visualization");
 
-    if (ImGui::DragFloat2("Data Range", m_util, 0.01f)) {
+    ImGui::BeginDisabled(m_autoScaleDataRange);
+    if (ImGui::DragFloat2("Data Range", m_util, 0.01f, 0.0f, 0.0f, "%.2f")) {
       m_util.y = std::max(m_util.x, m_util.y);
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Auto Scale")) {
-      rescaleToDataRange();
+    if (ImGui::Button("Rescale")) {
+      setUtilDataRange();
     }
+    ImGui::EndDisabled();
 
     ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
 
+#ifndef NDEBUG
+    ImGui::BeginDisabled();
     if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
       m_cameraClipping.x = std::max(0.1f, std::min(m_cameraClipping.x, m_cameraClipping.y - 0.1f));
       m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
     }
+    ImGui::EndDisabled();
+#endif
 
-    if (ImGui::DragFloat("Value Scale", &m_util.z, 0.01f, 0.0f, 100.0f)) {
-      setupCamera();
+    if (ImGui::DragFloat("Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+      setCameraTargetCenter();
     }
 
     if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
@@ -185,11 +163,16 @@ namespace App {
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Reset Camera")) {
+    if (ImGui::Button("Reset##ResetCamera")) {
       m_camera.reset();
     }
 
-    ImGui::SeparatorText("Debug Options");
+    ImGui::SameLine();
+    if (ImGui::Button("Recenter")) {
+      m_camera.recenter();
+    }
+
+    ImGui::SeparatorText("Options");
 
     if (ImGui::Checkbox("Stats", &m_showStats)) {
       m_debugFlags ^= BGFX_DEBUG_STATS;
@@ -200,6 +183,9 @@ namespace App {
     if (ImGui::Checkbox("Wireframe", &m_showLines)) {
       m_stateFlags ^= BGFX_STATE_PT_LINES;
     }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Autoscale", &m_autoScaleDataRange);
 
 #ifndef __EMSCRIPTEN__
     ImGui::SeparatorText("Performance");
@@ -241,6 +227,7 @@ namespace App {
   Q         : auto rescale data range
   T         : switch camera type
   X         : reset camera
+  D         : auto scale data range
   L         : show lines
   I         : show stats
 )";
@@ -289,34 +276,19 @@ namespace App {
     }
   }
 
-  void SweApp::loadScenario() {
-    m_scenarioType          = m_selectedScenarioType;
-    m_dimensions            = m_selectedDimensions;
-    m_simulationTime        = 0.0;
-    m_playing               = false;
-    m_showScenarioSelection = false;
+  bool SweApp::isBlockLoaded() { return m_scenario && m_block; }
 
-    loadBlock();
+  void SweApp::invalidateBlock() {
+    delete m_scenario;
+    delete m_block;
+    bgfx::destroy(m_vbh);
+    bgfx::destroy(m_ibh);
+    bgfx::destroy(m_heightMap);
   }
 
-  void SweApp::resetScenario() {
-    if (!m_block)
-      return;
-
-    m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
-    m_simulationTime = 0.0;
-    m_playing        = false;
-
-    setBlockBoundaryType(m_block, m_boundaryType);
-  }
-
-  void SweApp::loadBlock() {
-    if (m_scenario) {
-      delete m_scenario;
-      delete m_block;
-      bgfx::destroy(m_vbh);
-      bgfx::destroy(m_ibh);
-      bgfx::destroy(m_heightMap);
+  void SweApp::initializeBlock() {
+    if (isBlockLoaded()) {
+      invalidateBlock();
     }
 
     switch (m_scenarioType) {
@@ -339,10 +311,14 @@ namespace App {
     }
 #endif
     case ScenarioType::None:
-      m_scenarioType = ScenarioType::None;
-      m_dimensions   = {0, 0};
-      m_block        = nullptr;
-      m_scenario     = nullptr;
+      m_scenarioType   = ScenarioType::None;
+      m_block          = nullptr;
+      m_scenario       = nullptr;
+      m_dimensions     = {};
+      m_gridData       = {};
+      m_boundaryPos    = {};
+      m_util           = {};
+      m_cameraClipping = {};
       return;
     default:
       assert(false);
@@ -371,10 +347,12 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    rescaleToDataRange();
+    // m_autoScaleDataRange = true;
     m_util.z = 1.0f;
+    updateGrid();
+    setUtilDataRange();
+    setCameraTargetCenter();
     m_camera.reset();
-    setupCamera();
 
     m_endSimulationTime = 0.0;
 
@@ -399,101 +377,134 @@ namespace App {
     m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
   }
 
-  void SweApp::rescaleToDataRange() {
-    if (!m_block)
-      return;
+  void SweApp::loadScenario() {
+    m_scenarioType          = m_selectedScenarioType;
+    m_dimensions            = m_selectedDimensions;
+    m_simulationTime        = 0.0;
+    m_playing               = false;
+    m_showScenarioSelection = false;
 
-    const RealType* values = nullptr;
-
-    if (m_viewType == ViewType::HPlusB) {
-      const int size  = (m_dimensions.x + 2) * (m_dimensions.y + 2);
-      RealType* hCopy = new RealType[size];
-      memcpy(hCopy, m_block->getWaterHeight().getData(), size * sizeof(RealType));
-      const RealType* b = m_block->getBathymetry().getData();
-      for (int i = 0; i < size; i++) {
-        hCopy[i] += b[i];
-      }
-      values = hCopy;
-    } else {
-      values = getBlockValues(m_block, m_viewType).getData();
-    }
-
-    auto [min, max] = std::minmax_element(values, values + (m_dimensions.x + 2) * (m_dimensions.y + 2));
-
-    if (m_viewType == ViewType::HPlusB)
-      delete values;
-
-    m_util.x = (float)*min - 0.01f;
-    m_util.y = (float)*max + 0.01f;
+    initializeBlock();
   }
 
-  void SweApp::setupCamera() {
-    float left   = m_boundaryPos.x;
-    float right  = m_boundaryPos.y;
-    float bottom = m_boundaryPos.z;
-    float top    = m_boundaryPos.w;
+  void SweApp::resetSimulation() {
+    if (!isBlockLoaded())
+      return;
 
+    m_block->initialiseScenario(m_block->getOffsetX(), m_block->getOffsetY(), *m_scenario);
+    m_simulationTime = 0.0;
+    m_playing        = false;
+
+    setBlockBoundaryType(m_block, m_boundaryType);
+  }
+
+  void SweApp::setUtilDataRange() {
+    m_util.x = m_minMax.x;
+    m_util.y = m_minMax.y;
+  }
+
+  void SweApp::setCameraTargetCenter() {
+    if (!isBlockLoaded())
+      return;
     Vec3f center;
-    center.x = (left + right) * 0.5f;
-    center.y = (bottom + top) * 0.5f;
+    center.x = (m_boundaryPos.x + m_boundaryPos.y) * 0.5f;
+    center.y = (m_boundaryPos.z + m_boundaryPos.w) * 0.5f;
     center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.z;
     m_camera.setTargetCenter(center);
-
-    float maxDim  = std::max(right - left, top - bottom);
-    float maxDist = m_util.y - m_util.x;
-
-    m_cameraClipping.x = std::min(m_gridData.z, m_gridData.w) * 0.1f;
-    m_cameraClipping.y = maxDim * 10.0f + std::max(maxDim, maxDist);
-    m_cameraClipping.x = std::max(0.1f, std::min(m_cameraClipping.x, m_cameraClipping.y - 0.1f));
-    m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
   }
 
-  void SweApp::updateCamera(float dt) {
-    if (!m_block)
-      return;
-    if (m_windowSize.x <= 0 || m_windowSize.y <= 0)
-      return;
+  void SweApp::switchView(ViewType viewType) {
+    m_viewType = viewType;
+    setCameraTargetCenter();
+    updateGrid();
+    setUtilDataRange();
+  }
 
-    m_camera.setMouseOverUI(ImGui::GetIO().WantCaptureMouse);
+  void SweApp::switchBoundary(BoundaryType boundaryType) {
+    m_boundaryType = boundaryType;
+    setBlockBoundaryType(m_block, m_boundaryType);
+  }
 
-    m_camera.update(dt);
-    m_camera.applyViewProjection();
+  void SweApp::simulate(float dt) {
+    if (!isBlockLoaded() || !m_playing) {
+      return;
+    }
+
+    m_block->setGhostLayer();
+
+    RealType scaleFactor = RealType(std::min(dt * m_timeScale, 1.0f));
+
+    m_block->computeMaxTimeStep();
+    RealType maxTimeStep = m_block->getMaxTimeStep();
+    maxTimeStep *= scaleFactor;
+    m_block->simulateTimeStep(maxTimeStep);
+
+    m_simulationTime += (float)maxTimeStep;
+
+    if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
+      m_playing = false;
+    }
   }
 
   void SweApp::updateGrid() {
-    if (!m_block)
+    if (!isBlockLoaded())
       return;
 
     int nx = m_dimensions.x;
     int ny = m_dimensions.y;
 
-    if (m_viewType == ViewType::HPlusB) {
-      const auto& h = m_block->getWaterHeight();
-      const auto& b = m_block->getBathymetry();
+    Vec2f minMax = {std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
 
-      m_heightMapData.resize(nx * ny);
-      for (int j = 0; j < ny; j++) {
-        for (int i = 0; i < nx; i++) {
-          m_heightMapData[j * nx + i] = (float)(h[j + 1][i + 1] + b[j + 1][i + 1]);
-        }
-      }
-      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
-    } else {
-      const Float2D<RealType>& values = getBlockValues(m_block, m_viewType);
+    m_heightMapData.resize(nx * ny);
 
-      m_heightMapData.resize(nx * ny);
-      for (int j = 0; j < ny; j++) {
-        for (int i = 0; i < nx; i++) {
-          m_heightMapData[j * nx + i] = (float)values[j + 1][i + 1];
-        }
+    for (int j = 0; j < ny; j++) {
+      for (int i = 0; i < nx; i++) {
+        float value = getBlockValue(m_block, m_viewType, i, j);
+        minMax.x    = std::min(minMax.x, value);
+        minMax.y    = std::max(minMax.y, value);
+
+        m_heightMapData[j * nx + i] = value;
       }
-      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
     }
 
-    bgfx::setIndexBuffer(m_ibh);
-    bgfx::setVertexBuffer(0, m_vbh);
+    m_minMax = minMax;
 
-    bgfx::setTexture(0, u_heightMap, m_heightMap);
+    bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
+  }
+
+  void SweApp::updateControls(float) {
+    if (m_autoScaleDataRange) {
+      setUtilDataRange();
+    }
+  }
+
+  void SweApp::updateCamera() {
+    if (!isBlockLoaded() || m_windowSize.x <= 0 || m_windowSize.y <= 0)
+      return;
+
+    m_camera.setMouseOverUI(ImGui::GetIO().WantCaptureMouse);
+    m_camera.update();
+
+    // Calculate camera clipping planes so that the grid is always visible
+    float maxDim       = std::max(m_boundaryPos.y - m_boundaryPos.x, m_boundaryPos.w - m_boundaryPos.z);
+    float centerZ      = m_camera.getTargetCenter().z / m_util.z;
+    Vec3f offset       = m_camera.getTargetOffset();
+    float maxOffset    = std::max(std::max(std::abs(offset.x), std::abs(offset.y)), std::abs(offset.z));
+    float maxDist      = std::max(std::abs(m_minMax.x - centerZ), std::abs(m_minMax.y - centerZ)) * std::abs(m_util.z);
+    m_cameraClipping.x = maxDim * 0.005f;
+    m_cameraClipping.y = m_camera.getZoom() * maxDim + std::max(maxDim, maxDist) + maxOffset * 2.0f;
+
+    m_camera.applyViewProjection();
+  }
+
+  void SweApp::render() {
+    bgfx::touch(0);
+
+    if (isBlockLoaded()) {
+      bgfx::setIndexBuffer(m_ibh);
+      bgfx::setVertexBuffer(0, m_vbh);
+      bgfx::setTexture(0, u_heightMap, m_heightMap);
+    }
 
     bgfx::setUniform(u_gridData, m_gridData);
     bgfx::setUniform(u_boundaryPos, m_boundaryPos);
@@ -502,6 +513,8 @@ namespace App {
 
     bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);
+
+    bgfx::frame();
   }
 
   void SweApp::onResize(int, int) {}
@@ -522,43 +535,31 @@ namespace App {
       m_playing = !m_playing;
       break;
     case GLFW_KEY_R:
-      resetScenario();
+      resetSimulation();
       break;
     case GLFW_KEY_H:
-      m_viewType = ViewType::H;
-      rescaleToDataRange();
-      setupCamera();
+      switchView(ViewType::H);
       break;
     case GLFW_KEY_U:
-      m_viewType = ViewType::Hu;
-      rescaleToDataRange();
-      setupCamera();
+      switchView(ViewType::Hu);
       break;
     case GLFW_KEY_V:
-      m_viewType = ViewType::Hv;
-      rescaleToDataRange();
-      setupCamera();
+      switchView(ViewType::Hv);
       break;
     case GLFW_KEY_B:
-      m_viewType = ViewType::B;
-      rescaleToDataRange();
-      setupCamera();
+      switchView(ViewType::B);
       break;
     case GLFW_KEY_A:
-      m_viewType = ViewType::HPlusB;
-      rescaleToDataRange();
-      setupCamera();
+      switchView(ViewType::HPlusB);
       break;
     case GLFW_KEY_O:
-      m_boundaryType = BoundaryType::Outflow;
-      setBlockBoundaryType(m_block, m_boundaryType);
+      switchBoundary(BoundaryType::Outflow);
       break;
     case GLFW_KEY_W:
-      m_boundaryType = BoundaryType::Wall;
-      setBlockBoundaryType(m_block, m_boundaryType);
+      switchBoundary(BoundaryType::Wall);
       break;
     case GLFW_KEY_Q:
-      rescaleToDataRange();
+      setUtilDataRange();
       break;
     case GLFW_KEY_T:
       m_cameraIs3D = !m_cameraIs3D;
@@ -566,6 +567,9 @@ namespace App {
       break;
     case GLFW_KEY_X:
       m_camera.reset();
+      break;
+    case GLFW_KEY_D:
+      m_autoScaleDataRange = !m_autoScaleDataRange;
       break;
     case GLFW_KEY_L:
       m_showLines = !m_showLines;

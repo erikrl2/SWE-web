@@ -22,13 +22,22 @@ void main() {
   int   nx         = int(gridSize.x);
 
   vec2 gridPos  = vec2(mod(gl_VertexID, nx), gl_VertexID / nx);
-  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, (gridPos + 0.5) / gridSize).r);
+  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, (gridPos + 0.5) / gridSize).r * valueScale);
 
-  gl_Position = mul(u_modelViewProj, vec4(worldPos.xy, worldPos.z * valueScale, 1.0));
+  gl_Position = mul(u_modelViewProj, vec4(worldPos.xy, worldPos.z, 1.0));
 
-  float colFactor = 0.0;
-  if (dataRange.x != dataRange.y) {
-    colFactor = (worldPos.z - dataRange.x) / (dataRange.y - dataRange.x);
+  if (valueScale == 0.0) {
+    v_color0 = u_color;
+    return;
   }
+
+  if (dataRange.x == dataRange.y) {
+    dataRange.x -= 0.1;
+    dataRange.y += 0.1;
+  }
+
+  dataRange *= valueScale;
+
+  float colFactor = (worldPos.z - dataRange.x) / (dataRange.y - dataRange.x);
   v_color0 = vec4(colFactor * u_color.xyz, 1.0);
 }

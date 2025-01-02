@@ -44,14 +44,21 @@ namespace App {
     void onFileDropped(std::string_view path) override;
 
   private:
+    bool isBlockLoaded();
+    void invalidateBlock();
+    void initializeBlock();
     void loadScenario();
-    void resetScenario();
-    void loadBlock();
-    void rescaleToDataRange();
-    void setupCamera();
+    void resetSimulation();
+    void setUtilDataRange();
+    void setCameraTargetCenter();
+    void switchView(ViewType viewType);
+    void switchBoundary(BoundaryType boundaryType);
 
-    void updateCamera(float dt);
+    void simulate(float dt);
     void updateGrid();
+    void updateControls(float dt);
+    void updateCamera();
+    void render();
 
   private:
     bgfx::ProgramHandle m_program;
@@ -72,7 +79,8 @@ namespace App {
 
     Vec4f m_gridData;    // x: nx, y: ny, z: dx, w: dy
     Vec4f m_boundaryPos; // x: left, y: right, z: bottom, w: top
-    Vec4f m_util;        // x: minVal, y: maxVal, z: valueScale
+    Vec2f m_minMax;      // x: minVal, y: maxVal
+    Vec4f m_util;        // x: colorMinVal, y: colorMaxVal, z: valueScale
     Vec4f m_color = {1.0f, 1.0f, 1.0f, 1.0f};
 
     std::vector<float> m_heightMapData;
@@ -109,9 +117,10 @@ namespace App {
     bool         m_showScenarioSelection = false;
     Vec2i        m_selectedDimensions    = {100, 100};
     ScenarioType m_selectedScenarioType  = ScenarioType::ArtificialTsunami;
+    bool         m_cameraIs3D            = m_camera.getType() == Camera::Type::Perspective;
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
-    bool         m_cameraIs3D            = m_camera.getType() == Camera::Type::Perspective;
+    bool         m_autoScaleDataRange    = false;
 
   private:
     static const bgfx::EmbeddedShader shaders[];
