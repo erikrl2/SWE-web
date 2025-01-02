@@ -1,8 +1,8 @@
 #include "Camera.hpp"
 
-#include <GLFW/glfw3.h>
 #include <iostream>
 
+#include "Core/Input.hpp"
 #include "Utils.hpp"
 
 namespace App {
@@ -21,9 +21,9 @@ namespace App {
   void Camera::recenter() { m_targetOffset = {0, 0, 0}; }
 
   void Camera::update() {
-    bool leftButtonPressed   = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_LEFT);
-    bool rightButtonPressed  = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_RIGHT);
-    bool middleButtonPressed = Core::Input::isButtonPressed(GLFW_MOUSE_BUTTON_MIDDLE);
+    bool leftButtonPressed   = Core::Input::isButtonPressed(Core::Mouse::ButtonLeft);
+    bool rightButtonPressed  = Core::Input::isButtonPressed(Core::Mouse::ButtonRight);
+    bool middleButtonPressed = Core::Input::isButtonPressed(Core::Mouse::ButtonMiddle);
 
     bool buttonPressed = leftButtonPressed || rightButtonPressed || middleButtonPressed;
 

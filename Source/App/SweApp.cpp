@@ -4,7 +4,6 @@
 #include <bgfx/embedded_shader.h>
 #include <bx/math.h>
 #include <filesystem>
-#include <GLFW/glfw3.h>
 #include <imgui.h>
 #include <iostream>
 #include <limits>
@@ -499,63 +498,63 @@ namespace App {
 
   void SweApp::onResize(int, int) {}
 
-  void SweApp::onKeyPressed(int key) {
+  void SweApp::onKeyPressed(Core::KeyCode key) {
     switch (key) {
-    case GLFW_KEY_C:
+    case Core::Key::C:
       m_showControls = !m_showControls;
       break;
-    case GLFW_KEY_S:
+    case Core::Key::S:
       m_showScenarioSelection = !m_showScenarioSelection;
       break;
-    case GLFW_KEY_ENTER:
+    case Core::Key::Enter:
       if (m_showScenarioSelection)
         loadScenario();
       break;
-    case GLFW_KEY_SPACE:
+    case Core::Key::Space:
       m_playing = !m_playing;
       break;
-    case GLFW_KEY_R:
+    case Core::Key::R:
       resetSimulation();
       break;
-    case GLFW_KEY_H:
+    case Core::Key::H:
       switchView(ViewType::H);
       break;
-    case GLFW_KEY_U:
+    case Core::Key::U:
       switchView(ViewType::Hu);
       break;
-    case GLFW_KEY_V:
+    case Core::Key::V:
       switchView(ViewType::Hv);
       break;
-    case GLFW_KEY_B:
+    case Core::Key::B:
       switchView(ViewType::B);
       break;
-    case GLFW_KEY_A:
+    case Core::Key::A:
       switchView(ViewType::HPlusB);
       break;
-    case GLFW_KEY_O:
+    case Core::Key::O:
       switchBoundary(BoundaryType::Outflow);
       break;
-    case GLFW_KEY_W:
+    case Core::Key::W:
       switchBoundary(BoundaryType::Wall);
       break;
-    case GLFW_KEY_Q:
+    case Core::Key::Q:
       setUtilDataRange();
       break;
-    case GLFW_KEY_T:
+    case Core::Key::T:
       m_cameraIs3D = !m_cameraIs3D;
       m_camera.setType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
       break;
-    case GLFW_KEY_X:
+    case Core::Key::X:
       m_camera.reset();
       break;
-    case GLFW_KEY_D:
+    case Core::Key::D:
       m_autoScaleDataRange = !m_autoScaleDataRange;
       break;
-    case GLFW_KEY_L:
+    case Core::Key::L:
       m_showLines = !m_showLines;
       m_stateFlags ^= BGFX_STATE_PT_LINES;
       break;
-    case GLFW_KEY_I:
+    case Core::Key::I:
       m_showStats = !m_showStats;
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
@@ -564,7 +563,7 @@ namespace App {
 
     if (m_showScenarioSelection) {
       for (int i = 0; i < (int)ScenarioType::Count && i <= 9; i++) {
-        if (key == GLFW_KEY_0 + i) {
+        if (key == Core::Key::D0 + i) {
           m_selectedScenarioType = (ScenarioType)i;
         }
       }

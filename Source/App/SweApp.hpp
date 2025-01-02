@@ -39,7 +39,7 @@ namespace App {
     void updateImGui(float dt) override;
 
     void onResize(int width, int height) override;
-    void onKeyPressed(int key) override;
+    void onKeyPressed(Core::KeyCode key) override;
     void onMouseScrolled(float dx, float dy) override;
     void onFileDropped(std::string_view path) override;
 

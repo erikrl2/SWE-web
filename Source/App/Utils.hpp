@@ -6,7 +6,6 @@
 
 #include "Blocks/Block.hpp"
 #include "Types/BoundaryType.hpp"
-#include "Types/Float2D.hpp"
 #include "Types/RealType.hpp"
 #include "Types/Vec.hpp"
 

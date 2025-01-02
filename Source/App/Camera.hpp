@@ -3,7 +3,7 @@
 #include <bgfx/bgfx.h>
 #include <bx/math.h>
 
-#include "Core/Input.hpp"
+#include "Types/Vec.hpp"
 
 namespace App {
 

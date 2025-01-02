@@ -6,12 +6,12 @@
 
 namespace Core {
 
-  bool Input::isKeyPressed(int key) {
+  bool Input::isKeyPressed(KeyCode key) {
     auto* window = Application::get()->getWindow();
     return glfwGetKey(window, key) == GLFW_PRESS;
   }
 
-  bool Input::isButtonPressed(int button) {
+  bool Input::isButtonPressed(MouseCode button) {
     auto* window = Application::get()->getWindow();
     return glfwGetMouseButton(window, button) == GLFW_PRESS;
   }
