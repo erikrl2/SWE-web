@@ -5,8 +5,6 @@
 #include <iostream>
 #include <stdexcept>
 
-extern int g_useOpenMP;
-
 namespace Blocks {
 
   DimensionalSplittingBlock::DimensionalSplittingBlock(int nx, int ny, RealType dx, RealType dy):
@@ -21,10 +19,7 @@ namespace Blocks {
 
     RealType maxWaveSpeedX = RealType(0.0);
 
-// Loop over all vertical edges
-#ifdef ENABLE_OPENMP
-#pragma omp parallel for if (g_useOpenMP)
-#endif
+    // Loop over all vertical edges
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 2; x++) {
         RealType maxEdgeSpeedX = RealType(0.0);
@@ -58,10 +53,7 @@ namespace Blocks {
   }
 
   void DimensionalSplittingBlock::updateUnknowns(RealType dt) {
-// Loop over all inner cells
-#ifdef ENABLE_OPENMP
-#pragma omp parallel for if (g_useOpenMP)
-#endif
+    // Loop over all inner cells
     for (int y = 0; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
         h_[y][x] -= dt / dx_ * (hNetUpdatesRight_[y][x - 1] + hNetUpdatesLeft_[y][x]);
@@ -73,10 +65,7 @@ namespace Blocks {
 
     RealType maxWaveSpeedY = RealType(0.0);
 
-// Loop over horizontal edges
-#ifdef ENABLE_OPENMP
-#pragma omp parallel for if (g_useOpenMP)
-#endif
+    // Loop over horizontal edges
     for (int y = 1; y < ny_ + 2; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
         RealType maxEdgeSpeedY = RealType(0.0);
@@ -109,10 +98,7 @@ namespace Blocks {
     }
 #endif
 
-// Loop over all inner cells
-#ifdef ENABLE_OPENMP
-#pragma omp parallel for if (g_useOpenMP)
-#endif
+    // Loop over all inner cells
     for (int y = 1; y < ny_ + 1; y++) {
       for (int x = 1; x < nx_ + 1; x++) {
         h_[y][x] -= dt / dy_ * (hNetUpdatesRight_[y - 1][x] + hNetUpdatesLeft_[y][x]);

@@ -9,10 +9,6 @@
 #include <iostream>
 #include <limits>
 
-#ifdef ENABLE_OPENMP
-#include <omp.h>
-#endif
-
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
@@ -20,8 +16,6 @@
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
 #include "Utils.hpp"
-
-int g_useOpenMP = 0;
 
 namespace App {
 
@@ -195,20 +189,6 @@ namespace App {
       m_resetFlags ^= BGFX_RESET_VSYNC;
       bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
     }
-
-    ImGui::SameLine();
-#ifdef ENABLE_OPENMP
-    ImGui::Checkbox("Use OpenMP", (bool*)&g_useOpenMP);
-    if (g_useOpenMP) {
-      static const int maxThreads     = omp_get_max_threads();
-      static int       ompThreadCount = maxThreads;
-      ImGui::SameLine();
-      ImGui::SetNextItemWidth(50.0f);
-      if (ImGui::SliderInt("Threads", &ompThreadCount, 1, maxThreads)) {
-        omp_set_num_threads(ompThreadCount);
-      }
-    }
-#endif
 #endif
 
     ImGui::SameLine();
