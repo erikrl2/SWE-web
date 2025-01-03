@@ -572,7 +572,7 @@ namespace App {
 
   void SweApp::onMouseScrolled(float, float dy) { m_camera.onMouseScrolled(dy); }
 
-  void SweApp::onFileDropped(std::string_view path) {
+  void SweApp::onFileDropped([[maybe_unused]] std::string_view path) {
 #ifndef __EMSCRIPTEN__
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
       std::filesystem::path filepath(path);

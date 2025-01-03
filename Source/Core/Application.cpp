@@ -48,7 +48,7 @@ namespace Core {
     }
 
 #ifdef __EMSCRIPTEN__
-    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, EM_TRUE, emscriptenResizeCallback);
+    emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, emscriptenResizeCallback);
 #else
     glfwSetFramebufferSizeCallback(m_window, glfwFramebufferSizeCallback);
 #endif
@@ -157,9 +157,11 @@ namespace Core {
   }
 
 #ifdef __EMSCRIPTEN__
-  EM_BOOL Application::emscriptenResizeCallback(int, const EmscriptenUiEvent* e, void*) {
-    int width  = e->windowInnerWidth;
-    int height = e->windowInnerHeight;
+  bool Application::emscriptenResizeCallback(int, const EmscriptenUiEvent* e, void*) {
+    double devicePixelRatio = emscripten_get_device_pixel_ratio();
+
+    int width  = (int)(e->windowInnerWidth * devicePixelRatio);
+    int height = (int)(e->windowInnerHeight * devicePixelRatio);
 
     s_app->m_windowSize.x = width;
     s_app->m_windowSize.y = height;
@@ -172,7 +174,7 @@ namespace Core {
 
     s_app->onResize(width, height);
 
-    return EM_TRUE;
+    return true;
   }
 #endif
 

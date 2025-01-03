@@ -5,9 +5,8 @@
 #include "Input.hpp"
 #include "Types/Vec.hpp"
 
-// TODO: Fix emscripten build again (do forward declarations)
-
 struct GLFWwindow;
+struct EmscriptenUiEvent;
 
 int main(int argc, char** argv);
 
@@ -48,8 +47,7 @@ namespace Core {
   private:
 #ifdef __EMSCRIPTEN__
     static void emscriptenMainLoop();
-
-    static EM_BOOL emscriptenResizeCallback(int eventType, const EmscriptenUiEvent* e, void* userData);
+    static bool emscriptenResizeCallback(int eventType, const EmscriptenUiEvent* e, void* userData);
 #endif
 
     static void glfwFramebufferSizeCallback(GLFWwindow* window, int width, int height);
