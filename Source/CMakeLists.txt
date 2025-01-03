@@ -24,9 +24,8 @@ if(EMSCRIPTEN)
   target_link_options(${SWE_PROJECT_NAME}-App PRIVATE
     -sMAX_WEBGL_VERSION=2
     -sGL_ENABLE_GET_PROC_ADDRESS
-    -sTOTAL_MEMORY=32MB # TODO: Check
     -sALLOW_MEMORY_GROWTH=1
-    -sUSE_WEBGL2=1
+    -sMAX_WEBGL_VERSION=2
     -sUSE_GLFW=3
     --shell-file=${CMAKE_SOURCE_DIR}/Source/Shell.html
   )

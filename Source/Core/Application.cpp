@@ -82,8 +82,11 @@ namespace Core {
 #endif
 
 #ifdef __EMSCRIPTEN__
+    double devicePixelRatio = emscripten_get_device_pixel_ratio();
     double w, h;
     emscripten_get_element_css_size(".app", &w, &h);
+    w *= devicePixelRatio;
+    h *= devicePixelRatio;
     emscripten_set_canvas_element_size("#canvas", (int)w, (int)h);
     glfwSetWindowSize(s_app->m_window, (int)w, (int)h);
 #endif
