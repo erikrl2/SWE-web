@@ -173,7 +173,16 @@ namespace Core {
 
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
 
-        ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window, true);
+        switch (bgfx::getRendererType()) {
+        case bgfx::RendererType::OpenGL:
+          ImGui_ImplGlfw_InitForOpenGL((GLFWwindow*)window, true);
+          break;
+        case bgfx::RendererType::Vulkan:
+          ImGui_ImplGlfw_InitForVulkan((GLFWwindow*)window, true);
+          break;
+        default:
+          ImGui_ImplGlfw_InitForOther((GLFWwindow*)window, true);
+        }
 
         bgfx::RendererType::Enum type = bgfx::getRendererType();
         m_program = bgfx::createProgram(bgfx::createEmbeddedShader(s_embeddedShaders, type, "vs_imgui"), bgfx::createEmbeddedShader(s_embeddedShaders, type, "fs_imgui"), true);
