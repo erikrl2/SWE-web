@@ -8,8 +8,8 @@ pages:
   tags:
     - emcc
   script:
-    # Clone the GitHub repository into the deploy directory
-    - git clone https://benbieler@github.com/benbieler/swe-web.git deploy
+    # Clone the GitHub repository into the deploy directory with token-based authentication
+    - git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git deploy
     # Move the SWE-App.html to index.html
     - cp -R public/* deploy/
     - mv deploy/SWE-App.html deploy/index.html
@@ -20,7 +20,7 @@ pages:
     # Stage and commit the changes
     - git add .
     - git commit -m "Deploy to GitHub Pages from GitLab"
-    # Push the changes to the GitHub repository using the GitHub token
-    - git push https://benbieler:${GITHUB_TOKEN}@github.com/benbieler/swe-web.git main
+    # Push the changes to the GitHub repository
+    - git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git main
   only:
     - main
