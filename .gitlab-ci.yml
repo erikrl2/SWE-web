@@ -1,32 +1,24 @@
 image: emscripten/emsdk:latest
 
 stages:
-  - build
   - deploy
-
-build:
-  stage: build
-  tags:
-    - emcc
-  script:
-    - rm -rf build
-    - emsdk install latest
-    - emsdk activate latest
-    - source /home/gitlab-runner/emsdk/emsdk_env.sh
-    - mkdir build && cd build
-#    - emcmake cmake ..
-#    - emmake make SWE-App
 
 pages:
   stage: deploy
-  tags:
-    - emcc
   script:
-#    - mkdir public
-    - mv public/SWE-App.html public/index.html
-  artifacts:
-    paths:
-      - public
+    # Clone the GitHub repository into the deploy directory
+    - git clone https://benbieler@github.com/benbieler/swe-web.git deploy
+    # Move the SWE-App.html to index.html
+    - cp -R public/* deploy/
+    - mv deploy/SWE-App.html deploy/index.html
+    - cd deploy
+    # Configure Git for the deployment
+    - git config user.name "GitLab CI"
+    - git config user.email "ben.bieler@tum.de"
+    # Stage and commit the changes
+    - git add .
+    - git commit -m "Deploy to GitHub Pages from GitLab"
+    # Push the changes to the GitHub repository using the GitHub token
+    - git push https://benbieler:${GITHUB_TOKEN}@github.com/benbieler/swe-web.git main
   only:
     - main
-    - webpage
