@@ -1,0 +1,32 @@
+image: emscripten/emsdk:latest
+
+stages:
+  - build
+  - deploy
+
+build:
+  stage: build
+  tags:
+    - emcc
+  script:
+    - rm -rf build
+    - emsdk install latest
+    - emsdk activate latest
+    - source /home/gitlab-runner/emsdk/emsdk_env.sh
+    - mkdir build && cd build
+#    - emcmake cmake ..
+#    - emmake make SWE-App
+
+pages:
+  stage: deploy
+  tags:
+    - emcc
+  script:
+#    - mkdir public
+    - mv public/SWE-App.html public/index.html
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
+    - webpage
