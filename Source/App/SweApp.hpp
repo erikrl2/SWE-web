@@ -55,7 +55,7 @@ namespace App {
     void switchBoundary(BoundaryType boundaryType);
 
     void simulate(float dt);
-    void updateGrid();
+    void updateGrid(bool updateTexture = true);
     void updateControls(float dt);
     void updateCamera();
     void render();

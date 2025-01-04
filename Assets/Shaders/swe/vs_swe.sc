@@ -7,7 +7,7 @@ uniform vec4 u_boundaryPos;
 uniform vec4 u_util;
 uniform vec4 u_color;
 
-uniform sampler2D u_heightMap;
+SAMPLER2D(u_heightMap, 0);
 
 int mod(int a, int b) {
     return a - b * (a / b);
@@ -22,7 +22,7 @@ void main() {
   int   nx         = int(gridSize.x);
 
   vec2 gridPos  = vec2(mod(gl_VertexID, nx), gl_VertexID / nx);
-  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture(u_heightMap, (gridPos + 0.5) / gridSize).r * valueScale);
+  vec3 worldPos = vec3(gridStart + gridPos * cellSize, texture2D(u_heightMap, (gridPos + 0.5) / gridSize).r * valueScale);
 
   gl_Position = mul(u_modelViewProj, vec4(worldPos.xy, worldPos.z, 1.0));
 

@@ -328,7 +328,7 @@ namespace App {
 
     // m_autoScaleDataRange = true;
     m_util.z = 1.0f;
-    updateGrid();
+    updateGrid(false);
     setUtilDataRange();
     setCameraTargetCenter();
     m_camera.reset();
@@ -395,7 +395,7 @@ namespace App {
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
     setCameraTargetCenter();
-    updateGrid();
+    updateGrid(false);
     setUtilDataRange();
   }
 
@@ -425,7 +425,7 @@ namespace App {
     }
   }
 
-  void SweApp::updateGrid() {
+  void SweApp::updateGrid(bool updateTexture) {
     if (!isBlockLoaded())
       return;
 
@@ -448,7 +448,9 @@ namespace App {
 
     m_minMax = minMax;
 
-    bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
+    if (updateTexture) {
+      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
+    }
   }
 
   void SweApp::updateControls(float) {
