@@ -52,10 +52,10 @@ add_library(SWE-Interface INTERFACE)
 target_compile_features(SWE-Interface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 target_compile_options(SWE-Interface INTERFACE
-  -W
-  -Wall
-  -Wextra
-  -Wpedantic
+        -W
+        -Wall
+        -Wextra
+        -Wpedantic
 )
 
 option(ENABLE_SINGLE_PRECISION "Enable single floating-point precision" OFF)
@@ -74,12 +74,19 @@ find_package(bgfx REQUIRED)
 find_package(ImGui REQUIRED)
 target_link_libraries(SWE-Interface INTERFACE bgfx bx imgui)
 
+# Detect platform to select the correct shader Makefile
+if(${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+  set(SHADER_MK_FILE "shader-mac.mk")
+else()
+  set(SHADER_MK_FILE "shader.mk")
+endif()
+
 set(SHADER_DIR ${CMAKE_SOURCE_DIR}/Assets/Shaders CACHE PATH "Path to shader files")
 add_custom_target(
-    compile_shaders ALL
-    COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk SHADER_DIR=${SHADER_DIR}/ BGFX_DIR=${BGFX_DIR}/ | tee
-    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
-    COMMENT "Compiling shaders to header files using shader.mk"
+        compile_shaders ALL
+        COMMAND ${CMAKE_MAKE_PROGRAM} -f ${SHADER_MK_FILE} SHADER_DIR=${SHADER_DIR}/ BGFX_DIR=${BGFX_DIR}/ | tee
+        WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
+        COMMENT "Compiling shaders to header files using ${SHADER_MK_FILE}"
 )
 
 add_subdirectory(Source)
