@@ -10,18 +10,23 @@ pages:
   script:
     # Clone the GitHub repository into the deploy directory with token-based authentication
     - git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git deploy
-    # Move the SWE-App.html to index.html
+    # Move files from the public folder into the deploy folder
     - cp -R public/* deploy/
     - mv deploy/SWE-App.html deploy/index.html
     - cd deploy
     # Configure Git for the deployment
     - git config user.name "GitLab CI"
     - git config user.email "ben.bieler@tum.de"
-    # Stage and commit the changes
+    # Stage and check for changes
     - git add .
-    - git commit -m "Deploy to GitHub Pages from GitLab"
-    # Push the changes to the GitHub repository
-    - git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git main
+    - |
+      if ! git diff-index --quiet HEAD; then
+        git commit -m "Deploy to GitHub Pages from GitLab"
+        # Push the changes to the GitHub repository
+        git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git main
+      else
+        echo "No changes to commit"
+      fi
   artifacts:
     paths:
       - deploy
