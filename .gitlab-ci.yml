@@ -22,5 +22,8 @@ pages:
     - git commit -m "Deploy to GitHub Pages from GitLab"
     # Push the changes to the GitHub repository
     - git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git main
+  artifacts:
+    paths:
+      - deploy
   only:
     - main
