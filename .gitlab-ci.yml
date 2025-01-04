@@ -5,6 +5,8 @@ stages:
 
 pages:
   stage: deploy
+  tags:
+    - emcc
   script:
     # Clone the GitHub repository into the deploy directory
     - git clone https://benbieler@github.com/benbieler/swe-web.git deploy
