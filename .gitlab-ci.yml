@@ -11,7 +11,7 @@ deploy_to_github:
     # Clone the GitHub repository into the deploy directory with token-based authentication
     - git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git deploy
     # Move the files from the public folder into the deploy folder
-    - cp -R public/* deploy/
+    - cp -R Public/* deploy/
     - mv deploy/SWE-App.html deploy/index.html
     - cd deploy
     # Configure Git for deployment
