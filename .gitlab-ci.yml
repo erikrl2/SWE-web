@@ -3,18 +3,18 @@ image: emscripten/emsdk:latest
 stages:
   - deploy
 
-pages:
+deploy_to_github:
   stage: deploy
   tags:
     - emcc
   script:
     # Clone the GitHub repository into the deploy directory with token-based authentication
     - git clone https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git deploy
-    # Move files from the public folder into the deploy folder
+    # Move the files from the public folder into the deploy folder
     - cp -R public/* deploy/
     - mv deploy/SWE-App.html deploy/index.html
     - cd deploy
-    # Configure Git for the deployment
+    # Configure Git for deployment
     - git config user.name "GitLab CI"
     - git config user.email "ben.bieler@tum.de"
     # Stage and check for changes
@@ -22,13 +22,9 @@ pages:
     - |
       if ! git diff-index --quiet HEAD; then
         git commit -m "Deploy to GitHub Pages from GitLab"
-        # Push the changes to the GitHub repository
         git push https://${GITHUB_USERNAME}:${GITHUB_TOKEN}@github.com/${GITHUB_USERNAME}/swe-web.git main
       else
         echo "No changes to commit"
       fi
-  artifacts:
-    paths:
-      - deploy
   only:
     - main
