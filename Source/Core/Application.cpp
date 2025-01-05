@@ -77,7 +77,7 @@ namespace Core {
     bgfxInit.platformData.nwh  = glfwGetWin32Window(m_window);
     bgfxInit.platformData.ndt  = NULL;
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type             = bgfx::RendererType::Direct3D12;
+    bgfxInit.type              = bgfx::RendererType::Direct3D12;
 #elif __EMSCRIPTEN__
     bgfxInit.platformData.nwh = (void*)"#canvas";
     bgfxInit.type             = bgfx::RendererType::OpenGLES;

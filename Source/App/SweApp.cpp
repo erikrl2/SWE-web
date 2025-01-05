@@ -1,7 +1,6 @@
 #include "SweApp.hpp"
 
 #include <algorithm>
-#include <bgfx/embedded_shader.h>
 #include <bx/math.h>
 #include <filesystem>
 #include <imgui.h>
@@ -21,10 +20,7 @@ namespace App {
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
 
-    bgfx::RendererType::Enum type           = bgfx::getRendererType();
-    bgfx::ShaderHandle       vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
-    bgfx::ShaderHandle       fragmentShader = bgfx::createEmbeddedShader(shaders, type, "fs_swe");
-    m_program                               = bgfx::createProgram(vertexShader, fragmentShader, true);
+    m_program = bgfx::createProgram(bgfx::createShader(bgfx::makeRef(vs_swe, sizeof(vs_swe))), bgfx::createShader(bgfx::makeRef(fs_swe, sizeof(fs_swe))), true);
 
     CellVertex::init();
 
@@ -589,13 +585,6 @@ namespace App {
     }
 #endif
   }
-
-  const bgfx::EmbeddedShader SweApp::shaders[] = {
-    BGFX_EMBEDDED_SHADER(vs_swe),
-    BGFX_EMBEDDED_SHADER(fs_swe),
-
-    BGFX_EMBEDDED_SHADER_END()
-  };
 
   bgfx::VertexLayout CellVertex::layout;
 

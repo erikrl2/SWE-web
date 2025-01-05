@@ -1,4 +1,3 @@
-#include <bgfx/embedded_shader.h>
 #include <vector>
 
 #include "Blocks/DimensionalSplitting.hpp"
@@ -121,9 +120,6 @@ namespace App {
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
     bool         m_autoScaleDataRange    = false;
-
-  private:
-    static const bgfx::EmbeddedShader shaders[];
   };
 
 } // namespace App

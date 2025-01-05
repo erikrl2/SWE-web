@@ -6,7 +6,6 @@
 #include "ImGuiBgfx.hpp"
 
 #include <bgfx/bgfx.h>
-#include <bgfx/embedded_shader.h>
 #include <bx/allocator.h>
 #include <bx/math.h>
 #include <bx/timer.h>
@@ -22,15 +21,6 @@
 namespace Core {
 
   namespace ImGuiBgfx {
-
-    static const bgfx::EmbeddedShader s_embeddedShaders[] = {
-      BGFX_EMBEDDED_SHADER(vs_imgui),
-      BGFX_EMBEDDED_SHADER(fs_imgui),
-      BGFX_EMBEDDED_SHADER(vs_imgui_image),
-      BGFX_EMBEDDED_SHADER(fs_imgui_image),
-
-      BGFX_EMBEDDED_SHADER_END()
-    };
 
     // Helper function from bgfx_utils.h
     static bool checkAvailTransientBuffers(uint32_t _numVertices, const bgfx::VertexLayout& _layout, uint32_t _numIndices) {
@@ -184,12 +174,11 @@ namespace Core {
           ImGui_ImplGlfw_InitForOther((GLFWwindow*)window, true);
         }
 
-        bgfx::RendererType::Enum type = bgfx::getRendererType();
-        m_program = bgfx::createProgram(bgfx::createEmbeddedShader(s_embeddedShaders, type, "vs_imgui"), bgfx::createEmbeddedShader(s_embeddedShaders, type, "fs_imgui"), true);
+        m_program = bgfx::createProgram(bgfx::createShader(bgfx::makeRef(vs_imgui, sizeof(vs_imgui))), bgfx::createShader(bgfx::makeRef(fs_imgui, sizeof(fs_imgui))), true);
 
         u_imageLodEnabled = bgfx::createUniform("u_imageLodEnabled", bgfx::UniformType::Vec4);
         m_imageProgram    = bgfx::createProgram(
-          bgfx::createEmbeddedShader(s_embeddedShaders, type, "vs_imgui_image"), bgfx::createEmbeddedShader(s_embeddedShaders, type, "fs_imgui_image"), true
+          bgfx::createShader(bgfx::makeRef(vs_imgui_image, sizeof(vs_imgui_image))), bgfx::createShader(bgfx::makeRef(fs_imgui_image, sizeof(fs_imgui_image))), true
         );
 
         m_layout.begin()
