@@ -21,6 +21,10 @@ namespace App {
     Core::Application("Swe", 1280, 720) {
 
     m_program = bgfx::createProgram(bgfx::createShader(bgfx::makeRef(vs_swe, sizeof(vs_swe))), bgfx::createShader(bgfx::makeRef(fs_swe, sizeof(fs_swe))), true);
+    if (!bgfx::isValid(m_program)) {
+      std::cerr << "Failed to create program" << std::endl;
+      return;
+    }
 
     CellVertex::init();
 
@@ -575,11 +579,12 @@ namespace App {
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
       std::filesystem::path filepath(path);
       if (filepath.extension() == ".nc") {
-        std::string filename(filepath.filename());
+        std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
+        std::string filename   = filepath.filename().string();
         if (filename.find("bath") != std::string::npos) {
-          strncpy(m_bathymetryFile, path.data(), sizeof(m_bathymetryFile));
+          strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile));
         } else if (filename.find("displ") != std::string::npos) {
-          strncpy(m_displacementFile, path.data(), sizeof(m_displacementFile));
+          strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile));
         }
       }
     }
@@ -588,7 +593,7 @@ namespace App {
 
   bgfx::VertexLayout CellVertex::layout;
 
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::TexCoord0, 1, bgfx::AttribType::Uint8).end(); };
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 1, bgfx::AttribType::Uint8).end(); };
 
 } // namespace App
 

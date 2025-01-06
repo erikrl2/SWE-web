@@ -18,7 +18,7 @@ set(NetCDF_libs "${NETCDF_LIBRARIES_C}")
 get_filename_component(NetCDF_lib_dirs "${NETCDF_LIBRARIES_C}" PATH)
 
 find_path(NETCDF_INCLUDES_CXX NAMES netcdf HINTS "${NETCDF_INCLUDES}" NO_DEFAULT_PATH)
-find_library(NETCDF_LIBRARIES_CXX NAMES netcdf_c++4 HINTS "${NetCDF_lib_dirs}" NO_DEFAULT_PATH)
+find_library(NETCDF_LIBRARIES_CXX NAMES netcdf-cxx4 netcdf_c++4 HINTS "${NetCDF_lib_dirs}" NO_DEFAULT_PATH)
 
 if(NETCDF_INCLUDES_CXX AND NETCDF_LIBRARIES_CXX)
   list(INSERT NetCDF_libs 0 ${NETCDF_LIBRARIES_CXX})

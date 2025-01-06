@@ -5,7 +5,11 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/ocornut/imgui.git
   GIT_TAG        v1.91.6
 )
-cmake_policy(SET CMP0169 OLD)
+
+if(CMAKE_VERSION VERSION_GREATER "3.30")
+  cmake_policy(SET CMP0169 OLD)
+endif()
+
 FetchContent_Populate(imgui)
 
 file(WRITE "${imgui_SOURCE_DIR}/CMakeLists.txt" [[
@@ -23,6 +27,7 @@ add_library(imgui STATIC
 target_include_directories(imgui PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/backends
+  ${CMAKE_CURRENT_SOURCE_DIR}/../glfw-src/include
 )
 ]])
 

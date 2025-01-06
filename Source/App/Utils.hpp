@@ -29,4 +29,6 @@ namespace App {
   Vec3f    toVec3f(bx::Vec3 v);
   bx::Vec3 toBxVec3(Vec3f v);
 
+  std::string removeDriveLetter(const std::string& path);
+
 } // namespace App

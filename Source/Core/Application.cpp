@@ -77,7 +77,7 @@ namespace Core {
     bgfxInit.platformData.nwh  = glfwGetWin32Window(m_window);
     bgfxInit.platformData.ndt  = NULL;
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type              = bgfx::RendererType::Direct3D12;
+    bgfxInit.type              = bgfx::RendererType::Direct3D11;
 #elif __EMSCRIPTEN__
     bgfxInit.platformData.nwh = (void*)"#canvas";
     bgfxInit.type             = bgfx::RendererType::OpenGLES;
@@ -174,7 +174,7 @@ namespace Core {
     emscripten_set_canvas_element_size("#canvas", width, height);
     glfwSetWindowSize(s_app->m_window, width, height);
 
-    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
+    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC;
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     s_app->onResize(width, height);

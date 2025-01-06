@@ -76,16 +76,16 @@ target_link_libraries(SWE-Interface INTERFACE bgfx bx imgui)
 
 if(EMSCRIPTEN)
   set(SC_PLATFORM asm.js)
-  set(SC_PROFILE 300_es)
+  set(SC_PROFILE 300_es) # OpenGLES
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL Windows)
   set(SC_PLATFORM windows)
-  set(SC_PROFILE s_5_0) # TODO: -O3
+  set(SC_PROFILE "s_5_0 -O3") # Direct3D
 elseif(${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
   set(SC_PLATFORM osx)
-  set(SC_PROFILE metal)
+  set(SC_PROFILE metal) # Metal
 else() # Linux
   set(SC_PLATFORM linux)
-  set(SC_PROFILE spirv)
+  set(SC_PROFILE spirv) # Vulkan
 endif()
 
 add_custom_target(
