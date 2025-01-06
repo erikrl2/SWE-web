@@ -1,7 +1,6 @@
 #include "SweApp.hpp"
 
 #include <algorithm>
-#include <bgfx/embedded_shader.h>
 #include <bx/math.h>
 #include <filesystem>
 #include <imgui.h>
@@ -21,10 +20,11 @@ namespace App {
   SweApp::SweApp():
     Core::Application("Swe", 1280, 720) {
 
-    bgfx::RendererType::Enum type           = bgfx::getRendererType();
-    bgfx::ShaderHandle       vertexShader   = bgfx::createEmbeddedShader(shaders, type, "vs_swe");
-    bgfx::ShaderHandle       fragmentShader = bgfx::createEmbeddedShader(shaders, type, "fs_swe");
-    m_program                               = bgfx::createProgram(vertexShader, fragmentShader, true);
+    m_program = bgfx::createProgram(bgfx::createShader(bgfx::makeRef(vs_swe, sizeof(vs_swe))), bgfx::createShader(bgfx::makeRef(fs_swe, sizeof(fs_swe))), true);
+    if (!bgfx::isValid(m_program)) {
+      std::cerr << "Failed to create program" << std::endl;
+      return;
+    }
 
     CellVertex::init();
 
@@ -328,7 +328,7 @@ namespace App {
 
     // m_autoScaleDataRange = true;
     m_util.z = 1.0f;
-    updateGrid();
+    updateGrid(false);
     setUtilDataRange();
     setCameraTargetCenter();
     m_camera.reset();
@@ -395,7 +395,7 @@ namespace App {
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
     setCameraTargetCenter();
-    updateGrid();
+    updateGrid(false);
     setUtilDataRange();
   }
 
@@ -425,7 +425,7 @@ namespace App {
     }
   }
 
-  void SweApp::updateGrid() {
+  void SweApp::updateGrid(bool updateTexture) {
     if (!isBlockLoaded())
       return;
 
@@ -448,7 +448,9 @@ namespace App {
 
     m_minMax = minMax;
 
-    bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
+    if (updateTexture) {
+      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
+    }
   }
 
   void SweApp::updateControls(float) {
@@ -577,27 +579,21 @@ namespace App {
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
       std::filesystem::path filepath(path);
       if (filepath.extension() == ".nc") {
-        std::string filename(filepath.filename());
+        std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
+        std::string filename   = filepath.filename().string();
         if (filename.find("bath") != std::string::npos) {
-          strncpy(m_bathymetryFile, path.data(), sizeof(m_bathymetryFile));
+          strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile));
         } else if (filename.find("displ") != std::string::npos) {
-          strncpy(m_displacementFile, path.data(), sizeof(m_displacementFile));
+          strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile));
         }
       }
     }
 #endif
   }
 
-  const bgfx::EmbeddedShader SweApp::shaders[] = {
-    BGFX_EMBEDDED_SHADER(vs_swe),
-    BGFX_EMBEDDED_SHADER(fs_swe),
-
-    BGFX_EMBEDDED_SHADER_END()
-  };
-
   bgfx::VertexLayout CellVertex::layout;
 
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::TexCoord0, 1, bgfx::AttribType::Uint8).end(); };
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 1, bgfx::AttribType::Uint8).end(); };
 
 } // namespace App
 

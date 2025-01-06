@@ -1,6 +1,7 @@
 #include "Utils.hpp"
 
 #include <cassert>
+#include <filesystem>
 
 #include "SweApp.hpp"
 
@@ -110,5 +111,18 @@ namespace App {
   Vec3f toVec3f(bx::Vec3 v) { return {v.x, v.y, v.z}; }
 
   bx::Vec3 toBxVec3(Vec3f v) { return {v.x, v.y, v.z}; }
+
+  std::string removeDriveLetter(const std::string& path) {
+    std::filesystem::path fsPath(path);
+    if (fsPath.has_root_name() && fsPath.root_name().string().size() > 1) {
+      std::string modifiedPath = fsPath.string();
+      size_t      pos          = modifiedPath.find(':');
+      if (pos != std::string::npos) {
+        modifiedPath.erase(0, pos + 1);
+      }
+      return modifiedPath;
+    }
+    return path;
+  }
 
 } // namespace App

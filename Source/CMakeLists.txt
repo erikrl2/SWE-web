@@ -4,6 +4,7 @@ file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*")
 list(FILTER SOURCES EXCLUDE REGEX ".*EntryPoint\\.cpp$")
 
 # Add shaders as sources to trigger recompilation when they change
+set(SHADER_DIR ${CMAKE_SOURCE_DIR}/Assets/Shaders CACHE PATH "Path to shader files")
 file(GLOB_RECURSE SHADER_SOURCES CONFIGURE_DEPENDS "${SHADER_DIR}/*.sc")
 
 target_sources(${SWE_PROJECT_NAME} PRIVATE ${SOURCES} ${SHADER_SOURCES})

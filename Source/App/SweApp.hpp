@@ -1,4 +1,3 @@
-#include <bgfx/embedded_shader.h>
 #include <vector>
 
 #include "Blocks/DimensionalSplitting.hpp"
@@ -55,7 +54,7 @@ namespace App {
     void switchBoundary(BoundaryType boundaryType);
 
     void simulate(float dt);
-    void updateGrid();
+    void updateGrid(bool updateTexture = true);
     void updateControls(float dt);
     void updateCamera();
     void render();
@@ -121,9 +120,6 @@ namespace App {
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
     bool         m_autoScaleDataRange    = false;
-
-  private:
-    static const bgfx::EmbeddedShader shaders[];
   };
 
 } // namespace App

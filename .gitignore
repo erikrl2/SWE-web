@@ -74,6 +74,7 @@ html/*
 .idea/
 .vscode/
 .ccls-cache/
+.cache/
 compile_commands.json
 
 # Misc

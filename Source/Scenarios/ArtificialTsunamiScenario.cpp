@@ -1,5 +1,6 @@
 #include "ArtificialTsunamiScenario.hpp"
 
+#define _USE_MATH_DEFINES
 #include <cmath>
 
 Scenarios::ArtificialTsunamiScenario::ArtificialTsunamiScenario(BoundaryType boundaryType):

@@ -57,7 +57,9 @@ namespace Core {
     glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
 
+#if BGFX_CONFIG_MULTITHREADED
     bgfx::renderFrame(); // signals bgfx not to create a render thread
+#endif
 
     bgfx::Init bgfxInit;
 
@@ -65,17 +67,17 @@ namespace Core {
     bgfxInit.platformData.nwh  = (void*)uintptr_t(glfwGetX11Window(m_window));
     bgfxInit.platformData.ndt  = glfwGetX11Display();
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type              = bgfx::RendererType::OpenGL;
+    bgfxInit.type              = bgfx::RendererType::Vulkan;
 #elif BX_PLATFORM_OSX
     bgfxInit.platformData.nwh  = glfwGetCocoaWindow(m_window);
     bgfxInit.platformData.ndt  = NULL;
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type              = bgfx::RendererType::OpenGL;
+    bgfxInit.type              = bgfx::RendererType::Metal;
 #elif BX_PLATFORM_WINDOWS
     bgfxInit.platformData.nwh  = glfwGetWin32Window(m_window);
     bgfxInit.platformData.ndt  = NULL;
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type              = bgfx::RendererType::OpenGL;
+    bgfxInit.type              = bgfx::RendererType::Direct3D11;
 #elif __EMSCRIPTEN__
     bgfxInit.platformData.nwh = (void*)"#canvas";
     bgfxInit.type             = bgfx::RendererType::OpenGLES;
@@ -172,7 +174,7 @@ namespace Core {
     emscripten_set_canvas_element_size("#canvas", width, height);
     glfwSetWindowSize(s_app->m_window, width, height);
 
-    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
+    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC;
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     s_app->onResize(width, height);
