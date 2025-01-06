@@ -174,7 +174,7 @@ namespace Core {
     emscripten_set_canvas_element_size("#canvas", width, height);
     glfwSetWindowSize(s_app->m_window, width, height);
 
-    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC;
+    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     s_app->onResize(width, height);
