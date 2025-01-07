@@ -3,8 +3,8 @@
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Camera.hpp"
 #include "Core/Application.hpp"
-#include "Types/Float2D.hpp"
-#include "Types/Vec.hpp"
+#include "Types/ScenarioType.hpp"
+#include "Types/ViewType.hpp"
 
 namespace App {
 
@@ -14,19 +14,6 @@ namespace App {
     static bgfx::VertexLayout layout;
     static void               init();
   };
-
-  enum class ScenarioType {
-    None,
-#ifndef __EMSCRIPTEN__
-    Tsunami, // Requires NetCDF which isn't available with Emscripten
-#endif
-    ArtificialTsunami,
-    Test,
-    // TODO: Add more scenarios
-    Count
-  };
-
-  enum class ViewType { H, Hu, Hv, B, HPlusB, Count };
 
   class SweApp: public Core::Application {
   public:

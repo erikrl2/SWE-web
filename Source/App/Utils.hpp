@@ -5,14 +5,9 @@
 #include <string>
 
 #include "Blocks/Block.hpp"
-#include "Types/BoundaryType.hpp"
-#include "Types/RealType.hpp"
-#include "Types/Vec.hpp"
+#include "Types/Common.hpp"
 
 namespace App {
-
-  enum class ScenarioType;
-  enum class ViewType;
 
   std::string scenarioTypeToString(ScenarioType type);
   std::string viewTypeToString(ViewType type);

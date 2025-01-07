@@ -1,9 +1,5 @@
 #pragma once
 
-// namespace bx {
-//   struct Vec3;
-// } // namespace bx
-
 struct Vec2i {
   int x;
   int y;

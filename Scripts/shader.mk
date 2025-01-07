@@ -1,6 +1,10 @@
 THISDIR := $(dir $(lastword $(MAKEFILE_LIST)))
 
-# Set by cmake target
+# Set automatically when building
+#   Emscripten: asm.js, 300_es
+#   Linux:      linux, spirv
+#   MacOS:      osx, metal
+#   Windows:    windows, s_5_0
 PLATFORM ?=
 PROFILE ?=
 BGFX_DIR ?= $(THISDIR)../Build/_deps/bgfx-src/bgfx/
@@ -33,7 +37,7 @@ BIN = $(VS_BIN) $(FS_BIN)
 
 # ----------------------------------------------------------------------------
 vs_%.bin.h : vs_%.sc
-#	@echo "[$<]"
+	@echo "[$<]"
 	@$(SHADERC) $(VS_FLAGS) \
 		--platform $(PLATFORM) --profile $(PROFILE) \
 		-f "$<" -o "$@" \
@@ -41,7 +45,7 @@ vs_%.bin.h : vs_%.sc
 
 # ----------------------------------------------------------------------------
 fs_%.bin.h : fs_%.sc
-#	@echo "[$<]"
+	@echo "[$<]"
 	@$(SHADERC) $(FS_FLAGS) \
 		--platform $(PLATFORM) --profile $(PROFILE) \
 		-f "$<" -o "$@" \
@@ -53,6 +57,7 @@ fs_%.bin.h : fs_%.sc
 all: $(BIN)
 
 clean:
+	@echo "Cleaning..."
 	@-rm -f $(BIN)
 
 rebuild: clean all

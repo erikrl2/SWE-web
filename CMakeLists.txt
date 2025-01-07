@@ -88,9 +88,10 @@ else() # Linux
   set(SC_PROFILE spirv) # Vulkan
 endif()
 
+# NOTE: Clean header files with `make -f Scripts/shader.mk clean` before building on a different platform
 add_custom_target(
   compile_shaders ALL
-  COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk rebuild PLATFORM=${SC_PLATFORM} PROFILE=${SC_PROFILE} BGFX_DIR=${BGFX_DIR}/ | tee
+  COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk PLATFORM=${SC_PLATFORM} PROFILE=${SC_PROFILE} BGFX_DIR=${BGFX_DIR}/ | tee
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
   COMMENT "Compiling shaders to header files"
 )
