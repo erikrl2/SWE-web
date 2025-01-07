@@ -31,7 +31,8 @@ namespace App {
     u_gridData    = bgfx::createUniform("u_gridData", bgfx::UniformType::Vec4);
     u_boundaryPos = bgfx::createUniform("u_boundaryPos", bgfx::UniformType::Vec4);
     u_util        = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
-    u_color       = bgfx::createUniform("u_color", bgfx::UniformType::Vec4);
+    u_color1      = bgfx::createUniform("u_color1", bgfx::UniformType::Vec4);
+    u_color2      = bgfx::createUniform("u_color2", bgfx::UniformType::Vec4);
     u_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::setDebug(m_debugFlags);
@@ -41,20 +42,9 @@ namespace App {
 
   SweApp::~SweApp() {
     if (isBlockLoaded()) {
-      delete m_scenario;
-      delete m_block;
-      bgfx::destroy(m_vbh);
-      bgfx::destroy(m_ibh);
-      bgfx::destroy(m_heightMap);
+      destroyBlock();
     }
-
-    bgfx::destroy(u_gridData);
-    bgfx::destroy(u_boundaryPos);
-    bgfx::destroy(u_util);
-    bgfx::destroy(u_color);
-    bgfx::destroy(u_heightMap);
-
-    bgfx::destroy(m_program);
+    destroyProgram();
   }
 
   void SweApp::update(float dt) {
@@ -130,7 +120,8 @@ namespace App {
     }
     ImGui::EndDisabled();
 
-    ImGui::ColorEdit3("Grid Color", m_color, ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorEdit3("Grid Color 1", m_color1, ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorEdit3("Grid Color 2", m_color2, ImGuiColorEditFlags_NoAlpha);
 
 #ifndef NDEBUG
     ImGui::BeginDisabled();
@@ -257,7 +248,7 @@ namespace App {
 
   bool SweApp::isBlockLoaded() { return m_scenario && m_block; }
 
-  void SweApp::invalidateBlock() {
+  void SweApp::destroyBlock() {
     delete m_scenario;
     delete m_block;
     bgfx::destroy(m_vbh);
@@ -265,9 +256,20 @@ namespace App {
     bgfx::destroy(m_heightMap);
   }
 
+  void SweApp::destroyProgram() {
+    bgfx::destroy(u_gridData);
+    bgfx::destroy(u_boundaryPos);
+    bgfx::destroy(u_util);
+    bgfx::destroy(u_color1);
+    bgfx::destroy(u_color2);
+    bgfx::destroy(u_heightMap);
+
+    bgfx::destroy(m_program);
+  }
+
   void SweApp::initializeBlock() {
     if (isBlockLoaded()) {
-      invalidateBlock();
+      destroyBlock();
     }
 
     switch (m_scenarioType) {
@@ -490,7 +492,8 @@ namespace App {
     bgfx::setUniform(u_gridData, m_gridData);
     bgfx::setUniform(u_boundaryPos, m_boundaryPos);
     bgfx::setUniform(u_util, m_util);
-    bgfx::setUniform(u_color, m_color);
+    bgfx::setUniform(u_color1, m_color1);
+    bgfx::setUniform(u_color2, m_color2);
 
     bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);

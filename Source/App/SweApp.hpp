@@ -44,7 +44,8 @@ namespace App {
 
   private:
     bool isBlockLoaded();
-    void invalidateBlock();
+    void destroyBlock();
+    void destroyProgram();
     void initializeBlock();
     void loadScenario();
     void resetSimulation();
@@ -68,7 +69,8 @@ namespace App {
     bgfx::UniformHandle u_gridData;
     bgfx::UniformHandle u_boundaryPos;
     bgfx::UniformHandle u_util;
-    bgfx::UniformHandle u_color;
+    bgfx::UniformHandle u_color1;
+    bgfx::UniformHandle u_color2;
 
     bgfx::UniformHandle u_heightMap;
     bgfx::TextureHandle m_heightMap;
@@ -80,7 +82,8 @@ namespace App {
     Vec4f m_boundaryPos; // x: left, y: right, z: bottom, w: top
     Vec2f m_minMax;      // x: minVal, y: maxVal
     Vec4f m_util;        // x: colorMinVal, y: colorMaxVal, z: valueScale
-    Vec4f m_color = {1.0f, 1.0f, 1.0f, 1.0f};
+    Vec4f m_color1 = {0.0f, 0.0f, 0.0f, 1.0f};
+    Vec4f m_color2 = {1.0f, 1.0f, 1.0f, 1.0f};
 
     std::vector<float> m_heightMapData;
 

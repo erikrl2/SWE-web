@@ -5,7 +5,8 @@ $output v_color0
 uniform vec4 u_gridData;
 uniform vec4 u_boundaryPos;
 uniform vec4 u_util;
-uniform vec4 u_color;
+uniform vec4 u_color1;
+uniform vec4 u_color2;
 
 SAMPLER2D(u_heightMap, 0);
 
@@ -37,7 +38,7 @@ void main() {
       dataRange.y += 0.1;
     }
     dataRange *= valueScale;
-    float colFactor = (worldPos.z - dataRange.x) / (dataRange.y - dataRange.x);
-    v_color0 = vec4(colFactor * u_color.xyz, 1.0);
+    float colFactor = clamp((worldPos.z - dataRange.x) / (dataRange.y - dataRange.x), 0.0, 1.0);
+    v_color0 = mix(u_color1, u_color2, colFactor);
   }
 }
