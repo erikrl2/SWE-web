@@ -33,6 +33,7 @@ namespace App {
     u_util        = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
     u_color1      = bgfx::createUniform("u_color1", bgfx::UniformType::Vec4);
     u_color2      = bgfx::createUniform("u_color2", bgfx::UniformType::Vec4);
+    u_color3      = bgfx::createUniform("u_color3", bgfx::UniformType::Vec4);
     u_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::setDebug(m_debugFlags);
@@ -120,8 +121,9 @@ namespace App {
     }
     ImGui::EndDisabled();
 
-    ImGui::ColorEdit3("Grid Color 1", m_color1, ImGuiColorEditFlags_NoAlpha);
-    ImGui::ColorEdit3("Grid Color 2", m_color2, ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorEdit3("Color 1", m_color1, ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorEdit3("Color 2", m_color2, ImGuiColorEditFlags_NoAlpha);
+    ImGui::ColorEdit3("Color 3", m_color3, ImGuiColorEditFlags_NoAlpha);
 
 #ifndef NDEBUG
     ImGui::BeginDisabled();
@@ -136,7 +138,7 @@ namespace App {
       setCameraTargetCenter();
     }
 
-    if (ImGui::ColorEdit3("Background Color", m_clearColor)) {
+    if (ImGui::ColorEdit3("Background", m_clearColor)) {
       bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
     }
 
@@ -262,6 +264,7 @@ namespace App {
     bgfx::destroy(u_util);
     bgfx::destroy(u_color1);
     bgfx::destroy(u_color2);
+    bgfx::destroy(u_color3);
     bgfx::destroy(u_heightMap);
 
     bgfx::destroy(m_program);
@@ -494,6 +497,7 @@ namespace App {
     bgfx::setUniform(u_util, m_util);
     bgfx::setUniform(u_color1, m_color1);
     bgfx::setUniform(u_color2, m_color2);
+    bgfx::setUniform(u_color3, m_color3);
 
     bgfx::setState(m_stateFlags);
     bgfx::submit(0, m_program);

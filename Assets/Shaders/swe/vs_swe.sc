@@ -7,6 +7,7 @@ uniform vec4 u_boundaryPos;
 uniform vec4 u_util;
 uniform vec4 u_color1;
 uniform vec4 u_color2;
+uniform vec4 u_color3;
 
 SAMPLER2D(u_heightMap, 0);
 
@@ -39,6 +40,10 @@ void main() {
     }
     dataRange *= valueScale;
     float colFactor = clamp((worldPos.z - dataRange.x) / (dataRange.y - dataRange.x), 0.0, 1.0);
-    v_color0 = mix(u_color1, u_color2, colFactor);
+    if (colFactor < 0.5) {
+      v_color0 = mix(u_color1, u_color2, colFactor / 0.5);
+    } else {
+      v_color0 = mix(u_color2, u_color3, (colFactor - 0.5) / 0.5);
+    }
   }
 }
