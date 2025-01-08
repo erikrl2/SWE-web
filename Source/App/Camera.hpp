@@ -26,7 +26,7 @@ namespace App {
     void recenter();
 
     void update();
-    void applyViewProjection();
+    void applyViewProjection(bgfx::ViewId viewId);
 
     void onMouseScrolled(float delta);
 

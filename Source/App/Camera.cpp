@@ -16,6 +16,9 @@ namespace App {
     recenter();
     m_orientation = bx::InitIdentity;
     m_zoom        = 1.0f;
+
+    // rotate({0, -200.0});
+    zoom(-10.0f);
   }
 
   void Camera::recenter() { m_targetOffset = {0, 0, 0}; }
@@ -92,7 +95,7 @@ namespace App {
     }
   }
 
-  void Camera::applyViewProjection() {
+  void Camera::applyViewProjection(bgfx::ViewId viewId) {
     Vec2f domainSize   = {m_boundaryPos.y - m_boundaryPos.x, m_boundaryPos.w - m_boundaryPos.z};
     float domainAspect = domainSize.x / domainSize.y;
     float windowAspect = (float)m_windowSize.x / (float)m_windowSize.y;
@@ -125,7 +128,7 @@ namespace App {
       bx::mtxProj(proj, fov, windowAspect, m_cameraClipping.x, farPlane, bgfx::getCaps()->homogeneousDepth, bx::Handedness::Right);
     }
 
-    bgfx::setViewTransform(0, view, proj);
+    bgfx::setViewTransform(viewId, view, proj);
   }
 
   Vec3f Camera::forward() {

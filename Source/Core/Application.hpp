@@ -37,7 +37,11 @@ namespace Core {
 
     GLFWwindow* m_window;
 
-    const bgfx::ViewId m_mainView;
+    const bgfx::ViewId m_mainView = 0;
+
+    uint32_t m_debugFlags = BGFX_DEBUG_NONE;
+    uint32_t m_resetFlags = BGFX_RESET_VSYNC;
+    uint32_t m_clearFlags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH;
 
   private:
     void run();

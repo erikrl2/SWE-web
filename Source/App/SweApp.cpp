@@ -36,9 +36,7 @@ namespace App {
     u_color3      = bgfx::createUniform("u_color3", bgfx::UniformType::Vec4);
     s_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
-    bgfx::setDebug(m_debugFlags);
-    bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
-    bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
+    bgfx::setViewClear(m_mainView, m_clearFlags, colorToInt(m_clearColor));
   }
 
   SweApp::~SweApp() {
@@ -139,7 +137,7 @@ namespace App {
       ImGui::ColorEdit3("Color 2 (mid)", m_color2, ImGuiColorEditFlags_NoAlpha);
       ImGui::ColorEdit3("Color 3 (high)", m_color3, ImGuiColorEditFlags_NoAlpha);
       if (ImGui::ColorEdit3("Background", m_clearColor)) {
-        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
+        bgfx::setViewClear(m_mainView, m_clearFlags, colorToInt(m_clearColor));
       }
       ImGui::TreePop();
     }
@@ -164,14 +162,13 @@ namespace App {
 
 #ifndef NDEBUG
     if (ImGui::Checkbox("Stats", &m_showStats)) {
-      m_debugFlags ^= BGFX_DEBUG_STATS;
-      bgfx::setDebug(m_debugFlags);
+      toggleStats();
     }
+    ImGui::SameLine();
 #endif
 
-    ImGui::SameLine();
     if (ImGui::Checkbox("Wireframe", &m_showLines)) {
-      m_stateFlags ^= BGFX_STATE_PT_LINES;
+      toggleWireframe();
     }
 
     ImGui::SameLine();
@@ -180,10 +177,8 @@ namespace App {
 #ifndef __EMSCRIPTEN__
     ImGui::SeparatorText("Performance");
 
-    static bool vsync = m_resetFlags & BGFX_RESET_VSYNC;
-    if (ImGui::Checkbox("VSync", &vsync)) {
-      m_resetFlags ^= BGFX_RESET_VSYNC;
-      bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
+    if (ImGui::Checkbox("VSync", &m_vsyncEnabled)) {
+      toggleVsync();
     }
 #endif
 
@@ -459,6 +454,22 @@ namespace App {
     setBlockBoundaryType(m_block, m_boundaryType);
   }
 
+  void SweApp::toggleWireframe() {
+    m_stateFlags ^= BGFX_STATE_PT_LINES;
+  }
+
+  void SweApp::toggleStats() {
+    m_debugFlags ^= BGFX_DEBUG_STATS;
+    bgfx::setDebug(m_debugFlags);
+  }
+
+  void SweApp::toggleVsync() {
+    m_resetFlags ^= BGFX_RESET_VSYNC;
+#ifndef __EMSCRIPTEN__
+    bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
+#endif
+  }
+
   void SweApp::simulate(float dt) {
     if (!isBlockLoaded() || !m_playing) {
       return;
@@ -526,11 +537,11 @@ namespace App {
     m_cameraClipping.x = maxDim * 0.005f;
     m_cameraClipping.y = m_camera.getZoom() * maxDim + std::max(maxDim, maxDist) + maxOffset * 2.0f;
 
-    m_camera.applyViewProjection();
+    m_camera.applyViewProjection(m_mainView);
   }
 
   void SweApp::render() {
-    bgfx::touch(0);
+    bgfx::touch(m_mainView);
 
     if (isBlockLoaded()) {
       bgfx::setIndexBuffer(m_ibh);
@@ -546,7 +557,7 @@ namespace App {
     bgfx::setUniform(u_color3, m_color3);
 
     bgfx::setState(m_stateFlags);
-    bgfx::submit(0, m_program);
+    bgfx::submit(m_mainView, m_program);
 
     bgfx::frame();
   }
@@ -607,12 +618,15 @@ namespace App {
       break;
     case Core::Key::L:
       m_showLines = !m_showLines;
-      m_stateFlags ^= BGFX_STATE_PT_LINES;
+      toggleWireframe();
       break;
     case Core::Key::I:
       m_showStats = !m_showStats;
-      m_debugFlags ^= BGFX_DEBUG_STATS;
-      bgfx::setDebug(m_debugFlags);
+      toggleStats();
+      break;
+    case Core::Key::P:
+      m_vsyncEnabled = !m_vsyncEnabled;
+      toggleVsync();
       break;
     }
 

@@ -25,8 +25,7 @@ namespace Core {
 
   Application::Application(const std::string& title, int width, int height):
     m_title(title),
-    m_windowSize(width, height),
-    m_mainView(0) {
+    m_windowSize(width, height) {
     if (s_app) {
       assert(false);
       return;
@@ -56,10 +55,6 @@ namespace Core {
     glfwSetKeyCallback(m_window, glfwKeyCallback);
     glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
-
-    // #if BGFX_CONFIG_MULTITHREADED
-    //     bgfx::renderFrame(); // signals bgfx not to create a render thread
-    // #endif
 
     bgfx::Init bgfxInit;
 
@@ -96,15 +91,16 @@ namespace Core {
     glfwGetWindowSize(m_window, &m_windowSize.x, &m_windowSize.y);
     bgfxInit.resolution.width  = (uint32_t)m_windowSize.x;
     bgfxInit.resolution.height = (uint32_t)m_windowSize.y;
-    bgfxInit.resolution.reset  = BGFX_RESET_VSYNC;
+    bgfxInit.resolution.reset  = m_resetFlags;
 
     if (!bgfx::init(bgfxInit)) {
       std::cerr << "Failed to initialize bgfx" << std::endl;
       return;
     }
 
-    bgfx::setViewClear(m_mainView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
-    bgfx::setViewRect(m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
+    bgfx::setDebug(m_debugFlags);
+    bgfx::setViewClear(m_mainView, m_clearFlags);
+    bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     ImGuiBgfx::createImGuiContext(m_window);
   }
@@ -168,7 +164,7 @@ namespace Core {
     emscripten_set_canvas_element_size("#canvas", width, height);
     glfwSetWindowSize(s_app->m_window, width, height);
 
-    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
+    bgfx::reset((uint32_t)width, (uint32_t)height, s_app->m_resetFlags);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     s_app->onResize(width, height);
@@ -180,7 +176,7 @@ namespace Core {
   void Application::glfwFramebufferSizeCallback(GLFWwindow*, int width, int height) {
     s_app->m_windowSize.x = width;
     s_app->m_windowSize.y = height;
-    bgfx::reset((uint32_t)width, (uint32_t)height, BGFX_RESET_VSYNC);
+    bgfx::reset((uint32_t)width, (uint32_t)height, s_app->m_resetFlags);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);
 
     s_app->onResize(width, height);

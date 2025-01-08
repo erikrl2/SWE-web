@@ -1,5 +1,3 @@
-#include <vector>
-
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Camera.hpp"
 #include "Core/Application.hpp"
@@ -41,6 +39,9 @@ namespace App {
     void setCameraTargetCenter();
     void switchView(ViewType viewType);
     void switchBoundary(BoundaryType boundaryType);
+    void toggleWireframe();
+    void toggleStats();
+    void toggleVsync();
 
     void simulate(float dt);
     void updateGrid();
@@ -102,9 +103,7 @@ namespace App {
 
     Camera m_camera{m_windowSize, m_boundaryPos, m_cameraClipping};
 
-    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA;
-    uint32_t m_resetFlags = BGFX_RESET_VSYNC;
-    uint32_t m_debugFlags = BGFX_DEBUG_NONE;
+    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS;
 
     bool         m_showControls          = true;
     bool         m_showScenarioSelection = false;
@@ -114,6 +113,7 @@ namespace App {
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
     bool         m_autoScaleDataRange    = false;
+    bool         m_vsyncEnabled          = m_resetFlags & BGFX_RESET_VSYNC;
   };
 
 } // namespace App
