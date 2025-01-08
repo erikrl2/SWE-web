@@ -257,6 +257,16 @@ namespace App {
   void SweApp::destroyBlock() {
     delete m_scenario;
     delete m_block;
+    delete m_vertices;
+    delete m_indices;
+    delete m_heightMapData;
+
+    m_block         = nullptr;
+    m_scenario      = nullptr;
+    m_vertices      = nullptr;
+    m_indices       = nullptr;
+    m_heightMapData = nullptr;
+
     bgfx::destroy(m_vbh);
     bgfx::destroy(m_ibh);
     bgfx::destroy(m_heightMap);
@@ -282,26 +292,27 @@ namespace App {
     switch (m_scenarioType) {
     case ScenarioType::Test:
       m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
+      m_util.z   = 1.0f; // Value scale
       break;
     case ScenarioType::ArtificialTsunami:
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
+      m_util.z   = 1000.0f;
       break;
 #ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami: {
       const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions.x, m_dimensions.y);
       if (s->success()) {
         m_scenario = s;
+        m_util.z   = 1.0f;
         break;
       }
       std::cerr << "Failed to load Tsunami scenario" << std::endl;
       delete s;
+      m_scenarioType = ScenarioType::None;
       [[fallthrough]];
     }
 #endif
     case ScenarioType::None:
-      m_scenarioType   = ScenarioType::None;
-      m_block          = nullptr;
-      m_scenario       = nullptr;
       m_dimensions     = {};
       m_gridData       = {};
       m_boundaryPos    = {};
@@ -335,34 +346,63 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    m_autoScaleDataRange = true;
-    m_util.z             = 1.0f;
-    updateGrid(false);
+    createGrid({nx, ny});
+
+    updateGrid();
     setUtilDataRange();
     setCameraTargetCenter();
     m_camera.reset();
+    m_autoScaleDataRange = true;
 
     m_endSimulationTime = 0.0;
+  }
 
-    m_vertices.resize(nx * ny);
+  void SweApp::createGrid(Vec2i n) {
+    m_vertices = new CellVertex[n.x * n.y];
 
-    m_indices.clear();
-    m_indices.reserve(2 * (nx + 1) * (ny - 1) - 2);
-    for (int j = 0; j < ny - 1; j++) {
-      for (int i = 0; i < nx; i++) {
-        m_indices.push_back(j * nx + i);
-        m_indices.push_back((j + 1) * nx + i);
+#if 0 // TriStip
+    m_indices = new uint32_t[2 * (n.x + 1) * (n.y - 1) - 2];
+    int index = 0;
+
+    for (int j = 0; j < n.y - 1; j++) {
+      for (int i = 0; i < n.x; i++) {
+        m_indices[index++] = j * n.x + i;
+        m_indices[index++] = (j + 1) * n.x + i;
       }
-      if (j < ny - 2) {
-        m_indices.push_back((j + 1) * nx + (nx - 1));
-        m_indices.push_back((j + 1) * nx);
+      if (j < n.y - 2) {
+        m_indices[index++] = (j + 1) * n.x + (n.x - 1);
+        m_indices[index++] = (j + 1) * n.x;
       }
     }
+    m_stateFlags |= BGFX_STATE_PT_TRISTRIP;
+    assert(index == 2 * (n.x + 1) * (n.y - 1) - 2); // DEBUG
+#else // TriList
+    m_indices = new uint32_t[6 * (n.x - 1) * (n.y - 1)];
+    int index = 0;
 
-    m_vbh = bgfx::createVertexBuffer(bgfx::makeRef(m_vertices.data(), m_vertices.size() * sizeof(CellVertex)), CellVertex::layout);
-    m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices.data(), m_indices.size() * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+    for (int j = 0; j < n.y - 1; j++) {
+      for (int i = 0; i < n.x - 1; i++) {
+        uint32_t topLeft     = j * n.x + i;
+        uint32_t topRight    = topLeft + 1;
+        uint32_t bottomLeft  = (j + 1) * n.x + i;
+        uint32_t bottomRight = bottomLeft + 1;
+        m_indices[index++]   = topLeft;
+        m_indices[index++]   = bottomLeft;
+        m_indices[index++]   = topRight;
+        m_indices[index++]   = topRight;
+        m_indices[index++]   = bottomLeft;
+        m_indices[index++]   = bottomRight;
+      }
+    }
+    m_stateFlags &= ~BGFX_STATE_PT_TRISTRIP;
+    assert(index == 6 * (n.x - 1) * (n.y - 1)); // DEBUG
+#endif
 
-    m_heightMap = bgfx::createTexture2D(nx, ny, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
+    m_vbh = bgfx::createVertexBuffer(bgfx::makeRef(m_vertices, n.x * n.y * sizeof(CellVertex)), CellVertex::layout);
+    m_ibh = bgfx::createIndexBuffer(bgfx::makeRef(m_indices, index * sizeof(uint32_t)), BGFX_BUFFER_INDEX32);
+
+    m_heightMap     = bgfx::createTexture2D(n.x, n.y, false, 1, bgfx::TextureFormat::R32F, BGFX_TEXTURE_NONE);
+    m_heightMapData = new float[n.x * n.y];
   }
 
   void SweApp::loadScenario() {
@@ -410,7 +450,7 @@ namespace App {
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
     setCameraTargetCenter();
-    updateGrid(false);
+    updateGrid();
     setUtilDataRange();
   }
 
@@ -440,7 +480,7 @@ namespace App {
     }
   }
 
-  void SweApp::updateGrid(bool updateTexture) {
+  void SweApp::updateGrid() {
     if (!isBlockLoaded())
       return;
 
@@ -448,8 +488,6 @@ namespace App {
     int ny = m_dimensions.y;
 
     Vec2f minMax = {std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
-
-    m_heightMapData.resize(nx * ny);
 
     for (int j = 0; j < ny; j++) {
       for (int i = 0; i < nx; i++) {
@@ -463,9 +501,7 @@ namespace App {
 
     m_minMax = minMax;
 
-    if (updateTexture) {
-      bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData.data(), sizeof(float) * nx * ny));
-    }
+    bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData, sizeof(float) * nx * ny));
   }
 
   void SweApp::updateControls(float) {

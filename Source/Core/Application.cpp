@@ -57,9 +57,9 @@ namespace Core {
     glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
 
-// #if BGFX_CONFIG_MULTITHREADED
-//     bgfx::renderFrame(); // signals bgfx not to create a render thread
-// #endif
+    // #if BGFX_CONFIG_MULTITHREADED
+    //     bgfx::renderFrame(); // signals bgfx not to create a render thread
+    // #endif
 
     bgfx::Init bgfxInit;
 

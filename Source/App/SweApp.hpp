@@ -34,6 +34,7 @@ namespace App {
     void destroyBlock();
     void destroyProgram();
     void initializeBlock();
+    void createGrid(Vec2i n);
     void loadScenario();
     void resetSimulation();
     void setUtilDataRange();
@@ -42,7 +43,7 @@ namespace App {
     void switchBoundary(BoundaryType boundaryType);
 
     void simulate(float dt);
-    void updateGrid(bool updateTexture = true);
+    void updateGrid();
     void updateControls(float dt);
     void updateCamera();
     void render();
@@ -64,8 +65,9 @@ namespace App {
     bgfx::UniformHandle s_heightMap;
     bgfx::TextureHandle m_heightMap;
 
-    std::vector<CellVertex> m_vertices;
-    std::vector<uint32_t>   m_indices;
+    CellVertex* m_vertices      = nullptr;
+    uint32_t*   m_indices       = nullptr;
+    float*      m_heightMapData = nullptr;
 
     Vec4f m_gridData;    // x: nx, y: ny, z: dx, w: dy
     Vec4f m_boundaryPos; // x: left, y: right, z: bottom, w: top
@@ -75,8 +77,6 @@ namespace App {
     Vec4f m_color1 = {0.0f, 0.0f, 0.0f, 1.0f};
     Vec4f m_color2 = {0.0f, 0.25f, 1.0f, 1.0f};
     Vec4f m_color3 = {1.0f, 1.0f, 1.0f, 1.0f};
-
-    std::vector<float> m_heightMapData;
 
     Vec2f m_cameraClipping = {0.1f, 1000.0f};
     Vec4f m_clearColor     = {0.16f, 0.17f, 0.19f, 1.0f};
@@ -102,7 +102,7 @@ namespace App {
 
     Camera m_camera{m_windowSize, m_boundaryPos, m_cameraClipping};
 
-    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA | BGFX_STATE_PT_TRISTRIP;
+    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_MSAA;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
     uint32_t m_debugFlags = BGFX_DEBUG_NONE;
 
