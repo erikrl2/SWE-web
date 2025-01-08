@@ -61,7 +61,7 @@ namespace App {
     bgfx::UniformHandle u_color2;
     bgfx::UniformHandle u_color3;
 
-    bgfx::UniformHandle u_heightMap;
+    bgfx::UniformHandle s_heightMap;
     bgfx::TextureHandle m_heightMap;
 
     std::vector<CellVertex> m_vertices;
@@ -87,7 +87,7 @@ namespace App {
     ScenarioType m_scenarioType = ScenarioType::None;
     Vec2i        m_dimensions;
 
-    ViewType     m_viewType          = ViewType::H;
+    ViewType     m_viewType          = ViewType::HPlusB;
     BoundaryType m_boundaryType      = BoundaryType::Outflow;
     float        m_timeScale         = 60.0f;
     float        m_endSimulationTime = 0.0;

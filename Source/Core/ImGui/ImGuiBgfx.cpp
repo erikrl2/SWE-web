@@ -221,7 +221,7 @@ namespace Core {
         }
 
         style.FrameRounding    = 4.0f;
-        style.WindowBorderSize = 0.0f;
+        style.WindowBorderSize = 0.1f;
       }
 
       void beginFrame() {

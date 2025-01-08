@@ -34,7 +34,7 @@ namespace App {
     u_color1      = bgfx::createUniform("u_color1", bgfx::UniformType::Vec4);
     u_color2      = bgfx::createUniform("u_color2", bgfx::UniformType::Vec4);
     u_color3      = bgfx::createUniform("u_color3", bgfx::UniformType::Vec4);
-    u_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
+    s_heightMap   = bgfx::createUniform("u_heightMap", bgfx::UniformType::Sampler);
 
     bgfx::setDebug(m_debugFlags);
     bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
@@ -121,9 +121,9 @@ namespace App {
     }
     ImGui::EndDisabled();
 
-    ImGui::ColorEdit3("Color 1", m_color1, ImGuiColorEditFlags_NoAlpha);
-    ImGui::ColorEdit3("Color 2", m_color2, ImGuiColorEditFlags_NoAlpha);
-    ImGui::ColorEdit3("Color 3", m_color3, ImGuiColorEditFlags_NoAlpha);
+    if (ImGui::DragFloat("Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+      setCameraTargetCenter();
+    }
 
 #ifndef NDEBUG
     ImGui::BeginDisabled();
@@ -134,12 +134,14 @@ namespace App {
     ImGui::EndDisabled();
 #endif
 
-    if (ImGui::DragFloat("Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
-      setCameraTargetCenter();
-    }
-
-    if (ImGui::ColorEdit3("Background", m_clearColor)) {
-      bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
+    if (ImGui::TreeNode("Color Controls")) {
+      ImGui::ColorEdit3("Color 1 (low)", m_color1, ImGuiColorEditFlags_NoAlpha);
+      ImGui::ColorEdit3("Color 2 (mid)", m_color2, ImGuiColorEditFlags_NoAlpha);
+      ImGui::ColorEdit3("Color 3 (high)", m_color3, ImGuiColorEditFlags_NoAlpha);
+      if (ImGui::ColorEdit3("Background", m_clearColor)) {
+        bgfx::setViewClear(0, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH, colorToInt(m_clearColor));
+      }
+      ImGui::TreePop();
     }
 
     ImGui::SeparatorText("Camera");
@@ -160,10 +162,12 @@ namespace App {
 
     ImGui::SeparatorText("Options");
 
+#ifndef NDEBUG
     if (ImGui::Checkbox("Stats", &m_showStats)) {
       m_debugFlags ^= BGFX_DEBUG_STATS;
       bgfx::setDebug(m_debugFlags);
     }
+#endif
 
     ImGui::SameLine();
     if (ImGui::Checkbox("Wireframe", &m_showLines)) {
@@ -184,7 +188,7 @@ namespace App {
 #endif
 
     ImGui::SameLine();
-    ImGui::TextDisabled("FPS: %.0f", 1.0f / dt);
+    ImGui::TextDisabled("FPS: %.0f", ImGui::GetIO().Framerate);
 
     ImGui::SameLine(ImGui::GetWindowSize().x - 30);
     ImGui::TextDisabled("(?)");
@@ -265,7 +269,7 @@ namespace App {
     bgfx::destroy(u_color1);
     bgfx::destroy(u_color2);
     bgfx::destroy(u_color3);
-    bgfx::destroy(u_heightMap);
+    bgfx::destroy(s_heightMap);
 
     bgfx::destroy(m_program);
   }
@@ -331,8 +335,8 @@ namespace App {
     m_block->initialiseScenario(left, bottom, *m_scenario);
     m_block->setGhostLayer();
 
-    // m_autoScaleDataRange = true;
-    m_util.z = 1.0f;
+    m_autoScaleDataRange = true;
+    m_util.z             = 1.0f;
     updateGrid(false);
     setUtilDataRange();
     setCameraTargetCenter();
@@ -383,8 +387,14 @@ namespace App {
   }
 
   void SweApp::setUtilDataRange() {
-    m_util.x = m_minMax.x;
-    m_util.y = m_minMax.y;
+    if (std::abs(m_minMax.x - m_minMax.y) < 0.02f) {
+      float mid = (m_minMax.x + m_minMax.y) * 0.5f;
+      m_util.x  = mid - 0.01f;
+      m_util.y  = mid + 0.01f;
+    } else {
+      m_util.x = m_minMax.x;
+      m_util.y = m_minMax.y;
+    }
   }
 
   void SweApp::setCameraTargetCenter() {
@@ -489,7 +499,7 @@ namespace App {
     if (isBlockLoaded()) {
       bgfx::setIndexBuffer(m_ibh);
       bgfx::setVertexBuffer(0, m_vbh);
-      bgfx::setTexture(0, u_heightMap, m_heightMap);
+      bgfx::setTexture(0, s_heightMap, m_heightMap);
     }
 
     bgfx::setUniform(u_gridData, m_gridData);

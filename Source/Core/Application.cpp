@@ -57,9 +57,9 @@ namespace Core {
     glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
 
-#if BGFX_CONFIG_MULTITHREADED
-    bgfx::renderFrame(); // signals bgfx not to create a render thread
-#endif
+// #if BGFX_CONFIG_MULTITHREADED
+//     bgfx::renderFrame(); // signals bgfx not to create a render thread
+// #endif
 
     bgfx::Init bgfxInit;
 
@@ -127,10 +127,7 @@ namespace Core {
       return;
     }
 
-    static double lastTime = glfwGetTime();
-    double        now      = glfwGetTime();
-    double        dt       = now - lastTime;
-    lastTime               = now;
+    float dt = ImGui::GetIO().DeltaTime;
 
     ImGuiBgfx::beginImGuiFrame();
     s_app->updateImGui(dt);
@@ -147,10 +144,7 @@ namespace Core {
     while (!glfwWindowShouldClose(m_window)) {
       glfwPollEvents();
 
-      static double lastTime = glfwGetTime();
-      double        now      = glfwGetTime();
-      double        dt       = now - lastTime;
-      lastTime               = now;
+      float dt = ImGui::GetIO().DeltaTime;
 
       ImGuiBgfx::beginImGuiFrame();
       updateImGui(dt);

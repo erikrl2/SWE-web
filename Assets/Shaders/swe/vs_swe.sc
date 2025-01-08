@@ -9,7 +9,7 @@ uniform vec4 u_color1;
 uniform vec4 u_color2;
 uniform vec4 u_color3;
 
-SAMPLER2D(u_heightMap, 0);
+SAMPLER2D(s_heightMap, 0);
 
 uint mod(uint a, uint b) {
   return a - b * (a / b);
@@ -27,7 +27,7 @@ void main() {
   vec2 gridPos  = vec2(mod(id, nx), id / nx);
   vec2 texCoord = (gridPos + 0.5) / gridSize;
 
-  float height = texture2DLod(u_heightMap, texCoord, 0.0).r * valueScale;
+  float height = texture2DLod(s_heightMap, texCoord, 0.0).r * valueScale;
 
   vec3 worldPos = vec3(gridStart + gridPos * cellSize, height);
 
