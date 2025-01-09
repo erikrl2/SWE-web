@@ -136,7 +136,7 @@ namespace App {
     ImGui::EndDisabled();
 #endif
 
-    if (ImGui::TreeNode("Color Controls")) {
+    if (ImGui::TreeNodeEx("Color Controls", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanTextWidth)) {
       ImGui::ColorEdit3("Color 1 (low)", m_color1, ImGuiColorEditFlags_NoAlpha);
       ImGui::ColorEdit3("Color 2 (mid)", m_color2, ImGuiColorEditFlags_NoAlpha);
       ImGui::ColorEdit3("Color 3 (high)", m_color3, ImGuiColorEditFlags_NoAlpha);
@@ -291,20 +291,30 @@ namespace App {
     }
 
     switch (m_scenarioType) {
-    case ScenarioType::Test:
+    case ScenarioType::Test: {
       m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
-      m_util.z   = 1.0f; // Value scale
+
+      m_autoScaleDataRange = true;
+      m_util.z             = 1.0f; // Value scale
       break;
-    case ScenarioType::ArtificialTsunami:
+    }
+    case ScenarioType::ArtificialTsunami: {
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
-      m_util.z   = 1000.0f;
+
+      m_autoScaleDataRange = true;
+      m_util.z             = 1000.0f;
       break;
+    }
 #ifndef __EMSCRIPTEN__
     case ScenarioType::Tsunami: {
       const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions.x, m_dimensions.y);
+
       if (s->success()) {
-        m_scenario = s;
-        m_util.z   = 1.0f;
+        m_scenario           = s;
+        m_autoScaleDataRange = false;
+        m_util.x             = -0.01f;
+        m_util.y             = 0.01f;
+        m_util.z             = 1.0f;
         break;
       }
       std::cerr << "Failed to load Tsunami scenario" << std::endl;
@@ -313,13 +323,13 @@ namespace App {
       [[fallthrough]];
     }
 #endif
-    case ScenarioType::None:
-      m_dimensions     = {};
-      m_gridData       = {};
-      m_boundaryPos    = {};
-      m_util           = {};
-      m_cameraClipping = {};
+    case ScenarioType::None: {
+      m_dimensions  = {};
+      m_gridData    = {};
+      m_boundaryPos = {};
+      m_util        = {};
       return;
+    }
     default:
       assert(false);
     }
@@ -349,11 +359,10 @@ namespace App {
 
     createGrid({nx, ny});
 
-    updateGrid();
-    setUtilDataRange();
+    // updateGrid();
+    // setUtilDataRange();
     setCameraTargetCenter();
     m_camera.reset();
-    m_autoScaleDataRange = true;
 
     m_endSimulationTime = 0.0;
   }
@@ -451,8 +460,8 @@ namespace App {
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
     setCameraTargetCenter();
-    updateGrid();
-    setUtilDataRange();
+    // updateGrid();
+    // setUtilDataRange();
   }
 
   void SweApp::switchBoundary(BoundaryType boundaryType) {
@@ -565,14 +574,14 @@ namespace App {
       bgfx::setIndexBuffer(m_ibh);
       bgfx::setVertexBuffer(0, m_vbh);
       bgfx::setTexture(0, s_heightMap, m_heightMap);
-    }
 
-    bgfx::setUniform(u_gridData, m_gridData);
-    bgfx::setUniform(u_boundaryPos, m_boundaryPos);
-    bgfx::setUniform(u_util, m_util);
-    bgfx::setUniform(u_color1, m_color1);
-    bgfx::setUniform(u_color2, m_color2);
-    bgfx::setUniform(u_color3, m_color3);
+      bgfx::setUniform(u_gridData, m_gridData);
+      bgfx::setUniform(u_boundaryPos, m_boundaryPos);
+      bgfx::setUniform(u_util, m_util);
+      bgfx::setUniform(u_color1, m_color1);
+      bgfx::setUniform(u_color2, m_color2);
+      bgfx::setUniform(u_color3, m_color3);
+    }
 
     bgfx::setState(m_stateFlags);
     bgfx::submit(m_mainView, m_program);
