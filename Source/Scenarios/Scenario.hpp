@@ -46,7 +46,8 @@ namespace Scenarios {
     virtual RealType getMomentumV(RealType x, RealType y) const;
     virtual RealType getBathymetry(RealType x, RealType y) const;
 
-    virtual RealType getWaterHeightAtRest() const;
+    virtual RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const;
+    virtual RealType getDisplacement(RealType x, RealType y) const;
 
     virtual BoundaryType getBoundaryType(BoundaryEdge edge) const;
     virtual RealType     getBoundaryPos(BoundaryEdge edge) const;

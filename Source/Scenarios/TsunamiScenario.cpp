@@ -108,11 +108,7 @@ Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, c
   }
 }
 
-RealType Scenarios::TsunamiScenario::getWaterHeight(RealType x, RealType y) const { return -std::min(getBathymetryBeforeEarthquake(x, y), RealType(0.0)); }
-
-RealType Scenarios::TsunamiScenario::getBathymetry(RealType x, RealType y) const { return getBathymetryBeforeEarthquake(x, y) + getDisplacement(x, y); }
-
-RealType Scenarios::TsunamiScenario::getBathymetryBeforeEarthquake(RealType x, RealType y) const {
+RealType Scenarios::TsunamiScenario::getBathymetryBeforeDisplacement(RealType x, RealType y) const {
   if (x < boundaryPos_[0] || x > boundaryPos_[1] || y < boundaryPos_[2] || y > boundaryPos_[3]) {
     return RealType(0.0); // Will be later replaced by a boundary condition
   }

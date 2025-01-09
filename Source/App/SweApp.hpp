@@ -42,6 +42,7 @@ namespace App {
     void toggleWireframe();
     void toggleStats();
     void toggleVsync();
+    void applyDisplacement();
 
     void simulate(float dt);
     void updateGrid();

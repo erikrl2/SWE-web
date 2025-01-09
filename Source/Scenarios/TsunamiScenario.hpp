@@ -8,25 +8,18 @@
 
 namespace Scenarios {
 
-  /**
-   * Scenario "Tsunami":
-   */
   class TsunamiScenario: public Scenario {
   public:
     TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY);
     ~TsunamiScenario() override = default;
 
-    RealType getWaterHeight(RealType x, RealType y) const override;
-    RealType getBathymetry(RealType x, RealType y) const override;
+    RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
+    RealType getDisplacement(RealType x, RealType y) const override;
 
     BoundaryType getBoundaryType(BoundaryEdge) const override { return boundaryType_; }
     RealType     getBoundaryPos(BoundaryEdge edge) const override { return boundaryPos_[edge]; }
 
     bool success() const { return success_; }
-
-  private:
-    RealType getBathymetryBeforeEarthquake(RealType x, RealType y) const;
-    RealType getDisplacement(RealType x, RealType y) const;
 
   private:
     BoundaryType boundaryType_;

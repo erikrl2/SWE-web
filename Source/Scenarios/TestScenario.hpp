@@ -17,7 +17,11 @@ namespace Scenarios {
 
     TestScenario(const TestScenario& other) = delete;
 
-    RealType getWaterHeight(RealType x, RealType y) const override { return x + y; }
+    RealType getBathymetryBeforeDisplacement([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const override { return -getDisplacement(x, y); }
+
+    RealType getDisplacement(RealType x, RealType y) const override { return x + y; }
+
+    BoundaryType getBoundaryType([[maybe_unused]] BoundaryEdge edge) const override { return boundaryType_; }
 
     RealType getBoundaryPos(BoundaryEdge edge) const override {
       if (edge == BoundaryEdge::Left || edge == BoundaryEdge::Bottom) {
@@ -26,8 +30,6 @@ namespace Scenarios {
         return RealType(n_ + 0.5);
       }
     }
-
-    BoundaryType getBoundaryType([[maybe_unused]] BoundaryEdge edge) const override { return boundaryType_; }
 
   private:
     BoundaryType boundaryType_;

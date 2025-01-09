@@ -18,6 +18,7 @@ namespace App {
   RealType getScenarioValue(const Scenarios::Scenario* scenario, ViewType type, RealType x, RealType y);
 
   RealType getBlockValue(const Blocks::Block* block, ViewType type, int i, int j);
+  RealType getBlockValue(const Blocks::Block* block, ViewType type, RealType x, RealType y);
 
   void setBlockBoundaryType(Blocks::Block* block, BoundaryType type);
 

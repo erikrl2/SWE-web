@@ -6,10 +6,10 @@
 Scenarios::ArtificialTsunamiScenario::ArtificialTsunamiScenario(BoundaryType boundaryType):
   boundaryType_(boundaryType) {}
 
-RealType Scenarios::ArtificialTsunamiScenario::getWaterHeight([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(100.0); }
+RealType Scenarios::ArtificialTsunamiScenario::getBathymetryBeforeDisplacement([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return -100; }
 
-RealType Scenarios::ArtificialTsunamiScenario::getBathymetry(RealType x, RealType y) const {
-  RealType b = -100;
+RealType Scenarios::ArtificialTsunamiScenario::getDisplacement(RealType x, RealType y) const {
+  RealType b = 0;
   if (x >= -500.0 && x <= 500.0 && y >= -500.0 && y <= 500.0) {
     RealType dx = std::sin((x / 500.0 + 1) * M_PI);
     RealType dy = -(y / 500.0) * (y / 500.0) + 1.0;

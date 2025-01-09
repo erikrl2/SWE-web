@@ -22,15 +22,23 @@
 
 #include "Scenario.hpp"
 
-RealType Scenarios::Scenario::getWaterHeight([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(10.0); }
+#include <cmath>
+
+RealType Scenarios::Scenario::getWaterHeight([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const {
+  return -std::min(getBathymetryBeforeDisplacement(x, y), RealType(0.0));
+}
 
 RealType Scenarios::Scenario::getMomentumU([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(0.0); }
 
 RealType Scenarios::Scenario::getMomentumV([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(0.0); }
 
-RealType Scenarios::Scenario::getBathymetry([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(0.0); }
+RealType Scenarios::Scenario::getBathymetry([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const {
+  return getBathymetryBeforeDisplacement(x, y) + getDisplacement(x, y);
+}
 
-RealType Scenarios::Scenario::getWaterHeightAtRest() const { return RealType(10.0); }
+RealType Scenarios::Scenario::getBathymetryBeforeDisplacement([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(-10.0); }
+
+RealType Scenarios::Scenario::getDisplacement([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(0.0); }
 
 BoundaryType Scenarios::Scenario::getBoundaryType([[maybe_unused]] BoundaryEdge edge) const { return BoundaryType::Wall; }
 
@@ -38,6 +46,6 @@ RealType Scenarios::Scenario::getBoundaryPos(BoundaryEdge edge) const {
   if (edge == BoundaryEdge::Left || edge == BoundaryEdge::Bottom) {
     return RealType(0.0);
   } else {
-    return RealType(1.0);
+    return RealType(100.0);
   }
 }

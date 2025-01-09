@@ -1,6 +1,7 @@
 #include "Utils.hpp"
 
 #include <cassert>
+#include <cmath>
 #include <filesystem>
 
 namespace App {
@@ -82,19 +83,25 @@ namespace App {
   RealType getBlockValue(const Blocks::Block* block, ViewType type, int i, int j) {
     switch (type) {
     case ViewType::H:
-      return block->getWaterHeight()[j + 1][i + 1];
+      return block->getWaterHeight()[j][i];
     case ViewType::Hu:
-      return block->getDischargeHu()[j + 1][i + 1];
+      return block->getDischargeHu()[j][i];
     case ViewType::Hv:
-      return block->getDischargeHv()[j + 1][i + 1];
+      return block->getDischargeHv()[j][i];
     case ViewType::B:
-      return block->getBathymetry()[j + 1][i + 1];
+      return block->getBathymetry()[j][i];
     case ViewType::HPlusB:
-      return block->getWaterHeight()[j + 1][i + 1] + block->getBathymetry()[j + 1][i + 1];
+      return block->getWaterHeight()[j][i] + block->getBathymetry()[j][i];
     default:
       assert(false);
     }
     return 0; // dummy
+  }
+
+  RealType getBlockValue(const Blocks::Block* block, ViewType type, RealType x, RealType y) {
+    int i = std::round((x - block->getOffsetX()) / block->getDx() + RealType(0.5));
+    int j = std::round((y - block->getOffsetY()) / block->getDy() + RealType(0.5));
+    return getBlockValue(block, type, i, j);
   }
 
   void setBlockBoundaryType(Blocks::Block* block, BoundaryType type) {

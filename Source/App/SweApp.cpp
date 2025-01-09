@@ -81,6 +81,10 @@ namespace App {
     ImGui::SameLine();
     ImGui::Text("Time: %.1f s", m_simulationTime);
 
+    if (ImGui::Button("Reapply Displacement")) {
+      applyDisplacement();
+    }
+
     if (ImGui::BeginCombo("View Type", viewTypeToString(m_viewType).c_str())) {
       for (int i = 0; i < (int)ViewType::Count; i++) {
         ViewType type = (ViewType)i;
@@ -190,9 +194,10 @@ namespace App {
     static const char* helpText = R"(Key Bindings:
 
   C         : hide control window
-  S         : open scenario selection.
-  Space     : start/stop simulation.
-  R         : reset simulation.
+  S         : open scenario selection
+  Space     : start/stop simulation
+  R         : reset simulation
+  F         : apply displacement
   H/U/V/B/A : select view type
   O/W       : select boundary type
   Q         : auto rescale data range
@@ -201,6 +206,7 @@ namespace App {
   D         : auto scale data range
   L         : show lines
   I         : show stats
+  P         : toggle vsync (desktop only)
 )";
     ImGui::SetItemTooltip("%s", helpText);
 
@@ -454,9 +460,7 @@ namespace App {
     setBlockBoundaryType(m_block, m_boundaryType);
   }
 
-  void SweApp::toggleWireframe() {
-    m_stateFlags ^= BGFX_STATE_PT_LINES;
-  }
+  void SweApp::toggleWireframe() { m_stateFlags ^= BGFX_STATE_PT_LINES; }
 
   void SweApp::toggleStats() {
     m_debugFlags ^= BGFX_DEBUG_STATS;
@@ -468,6 +472,16 @@ namespace App {
 #ifndef __EMSCRIPTEN__
     bgfx::reset(m_windowSize.x, m_windowSize.y, m_resetFlags);
 #endif
+  }
+
+  void SweApp::applyDisplacement() {
+    if (!isBlockLoaded())
+      return;
+
+    m_block->setWaterHeight([](RealType x, RealType y) -> RealType {
+      SweApp* app = static_cast<SweApp*>(Core::Application::get());
+      return getBlockValue(app->m_block, ViewType::H, x, y) + app->m_scenario->getDisplacement(x, y);
+    });
   }
 
   void SweApp::simulate(float dt) {
@@ -489,6 +503,10 @@ namespace App {
     if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
       m_playing = false;
     }
+    if (m_simulationTime != m_simulationTime || m_simulationTime == std::numeric_limits<float>::infinity()) {
+      std::cerr << "Simulation crashed" << std::endl;
+      resetSimulation();
+    }
   }
 
   void SweApp::updateGrid() {
@@ -502,7 +520,7 @@ namespace App {
 
     for (int j = 0; j < ny; j++) {
       for (int i = 0; i < nx; i++) {
-        float value = getBlockValue(m_block, m_viewType, i, j);
+        float value = getBlockValue(m_block, m_viewType, i + 1, j + 1);
         minMax.x    = std::min(minMax.x, value);
         minMax.y    = std::max(minMax.y, value);
 
@@ -627,6 +645,9 @@ namespace App {
     case Core::Key::P:
       m_vsyncEnabled = !m_vsyncEnabled;
       toggleVsync();
+      break;
+    case Core::Key::F:
+      applyDisplacement();
       break;
     }
 
