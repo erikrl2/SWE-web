@@ -183,7 +183,7 @@ namespace Core {
   }
 
   void Application::glfwKeyCallback(GLFWwindow*, int key, int, int action, int) {
-    if (ImGui::GetIO().WantCaptureKeyboard)
+    if (ImGui::GetIO().WantTextInput)
       return;
 
     if (action == GLFW_PRESS) {

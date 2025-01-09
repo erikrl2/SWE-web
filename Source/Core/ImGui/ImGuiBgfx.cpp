@@ -162,6 +162,7 @@ namespace Core {
         setupStyle(true);
 
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
         switch (bgfx::getRendererType()) {
         case bgfx::RendererType::OpenGL:

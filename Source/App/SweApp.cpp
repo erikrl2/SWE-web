@@ -604,7 +604,8 @@ namespace App {
         loadScenario();
       break;
     case Core::Key::Space:
-      m_playing = !m_playing;
+      if (!ImGui::GetIO().NavVisible)
+        m_playing = !m_playing;
       break;
     case Core::Key::R:
       resetSimulation();
