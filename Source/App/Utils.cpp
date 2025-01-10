@@ -81,6 +81,9 @@ namespace App {
   }
 
   RealType getBlockValue(const Blocks::Block* block, ViewType type, int i, int j) {
+    assert(i >= 1 && i <= block->getNx());
+    assert(j >= 1 && j <= block->getNy());
+
     switch (type) {
     case ViewType::H:
       return block->getWaterHeight()[j][i];

@@ -7,7 +7,7 @@
 namespace App {
 
   struct CellVertex {
-    uint8_t placeholder = 0;
+    uint8_t isDry = 0;
 
     static bgfx::VertexLayout layout;
     static void               init();
@@ -34,8 +34,10 @@ namespace App {
     void initializeBlock();
     void createGrid(Vec2i n);
     void loadScenario();
+    void startSimulation();
     void resetSimulation();
     void setUtilDataRange();
+    void resetCamera();
     void setCameraTargetCenter();
     void switchView(ViewType viewType);
     void switchBoundary(BoundaryType boundaryType);
@@ -43,6 +45,7 @@ namespace App {
     void toggleStats();
     void toggleVsync();
     void applyDisplacement();
+    void warn(const char* message);
 
     void simulate(float dt);
     void updateGrid();
@@ -115,6 +118,10 @@ namespace App {
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
     bool         m_autoScaleDataRange    = false;
     bool         m_vsyncEnabled          = m_resetFlags & BGFX_RESET_VSYNC;
+
+    bool m_setFocusValueScale = false;
+
+    const char* m_message = "";
   };
 
 } // namespace App

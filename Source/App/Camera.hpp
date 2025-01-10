@@ -59,7 +59,7 @@ namespace App {
     bx::Quaternion m_orientation = bx::InitIdentity;
 
   private:
-    const float MinZoom     = 0.1f;
+    const float MinZoom     = 0.01f;
     const float MaxZoom     = 10.0f;
     const float ZoomSpeed   = 0.005f;
     const float RotateSpeed = 0.005f;

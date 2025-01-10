@@ -92,11 +92,9 @@ namespace Blocks {
       }
     }
 
-#ifndef NDEBUG
     if (dt >= RealType(0.5) * dy_ / maxWaveSpeedY) {
-      std::cerr << "CFL condition not satisfied in y-sweep!" << std::endl;
+      std::cerr << "Warning: CFL condition violated" << std::endl;
     }
-#endif
 
     // Loop over all inner cells
     for (int y = 1; y < ny_ + 1; y++) {
@@ -105,6 +103,12 @@ namespace Blocks {
         hv_[y][x] -= dt / dy_ * (huNetUpdatesRight_[y - 1][x] + huNetUpdatesLeft_[y][x]);
       }
     }
+  }
+
+  bool DimensionalSplittingBlock::hasError() {
+    bool e        = solver_.Error;
+    solver_.Error = false;
+    return e;
   }
 
 } // namespace Blocks

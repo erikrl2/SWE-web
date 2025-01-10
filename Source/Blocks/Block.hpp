@@ -219,6 +219,8 @@ namespace Blocks {
      */
     virtual void updateUnknowns(RealType dt) = 0;
 
+    virtual bool hasError() = 0;
+
     // Access methods to grid sizes
     /// Returns #nx, i.e. the grid size in x-direction
     int getNx() const;

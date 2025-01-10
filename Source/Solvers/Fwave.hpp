@@ -61,6 +61,8 @@ namespace Solvers {
       RealType& o_huUpdateRight,
       RealType& o_maxWaveSpeed
     );
+
+    bool Error = false;
   };
 
 } // namespace Solvers

@@ -75,11 +75,14 @@ namespace App {
 
     ImGui::SameLine();
     if (ImGui::Button(!m_playing ? "Start" : "Stop")) {
-      m_playing = !m_playing;
+      startSimulation();
     }
 
     ImGui::SameLine();
     ImGui::Text("Time: %.1f s", m_simulationTime);
+
+    ImGui::SameLine();
+    ImGui::TextColored({1, 0, 0, 1}, "%s", m_message);
 
     if (ImGui::Button("Reapply Displacement")) {
       applyDisplacement();
@@ -123,6 +126,10 @@ namespace App {
     }
     ImGui::EndDisabled();
 
+    if (m_setFocusValueScale) {
+      ImGui::SetKeyboardFocusHere();
+      m_setFocusValueScale = false;
+    }
     if (ImGui::DragFloat("Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
       setCameraTargetCenter();
     }
@@ -154,7 +161,7 @@ namespace App {
 
     ImGui::SameLine();
     if (ImGui::Button("Reset##ResetCamera")) {
-      m_camera.reset();
+      resetCamera();
     }
 
     ImGui::SameLine();
@@ -317,7 +324,7 @@ namespace App {
         m_util.z             = 1.0f;
         break;
       }
-      std::cerr << "Failed to load Tsunami scenario" << std::endl;
+      warn("Failed loading scenario");
       delete s;
       m_scenarioType = ScenarioType::None;
       [[fallthrough]];
@@ -361,16 +368,22 @@ namespace App {
 
     // updateGrid();
     // setUtilDataRange();
-    setCameraTargetCenter();
-    m_camera.reset();
+    resetCamera();
 
     m_endSimulationTime = 0.0;
+    m_message           = "";
   }
 
   void SweApp::createGrid(Vec2i n) {
     m_vertices = new CellVertex[n.x * n.y];
 
-#if 0 // TriStip
+    for (int j = 0; j < n.y; j++) {
+      for (int i = 0; i < n.x; i++) {
+        m_vertices[j * n.x + i].isDry = getBlockValue(m_block, ViewType::B, i + 1, j + 1) > RealType(0) ? 255 : 0;
+      }
+    }
+
+#if 0 // TriStrip
     m_indices = new uint32_t[2 * (n.x + 1) * (n.y - 1) - 2];
     int index = 0;
 
@@ -425,6 +438,11 @@ namespace App {
     initializeBlock();
   }
 
+  void SweApp::startSimulation() {
+    m_playing = !m_playing;
+    m_message = "";
+  }
+
   void SweApp::resetSimulation() {
     if (!isBlockLoaded())
       return;
@@ -447,6 +465,11 @@ namespace App {
     }
   }
 
+  void SweApp::resetCamera() {
+    setCameraTargetCenter();
+    m_camera.reset();
+  }
+
   void SweApp::setCameraTargetCenter() {
     if (!isBlockLoaded())
       return;
@@ -462,6 +485,7 @@ namespace App {
     setCameraTargetCenter();
     // updateGrid();
     // setUtilDataRange();
+    m_message = "";
   }
 
   void SweApp::switchBoundary(BoundaryType boundaryType) {
@@ -493,6 +517,11 @@ namespace App {
     });
   }
 
+  void SweApp::warn(const char* message) {
+    m_message = message;
+    std::cerr << message << std::endl;
+  }
+
   void SweApp::simulate(float dt) {
     if (!isBlockLoaded() || !m_playing) {
       return;
@@ -507,14 +536,16 @@ namespace App {
     maxTimeStep *= scaleFactor;
     m_block->simulateTimeStep(maxTimeStep);
 
+    if (m_block->hasError()) {
+      warn("Simulation crashed");
+      resetSimulation();
+      return;
+    }
+
     m_simulationTime += (float)maxTimeStep;
 
     if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
       m_playing = false;
-    }
-    if (m_simulationTime != m_simulationTime || m_simulationTime == std::numeric_limits<float>::infinity()) {
-      std::cerr << "Simulation crashed" << std::endl;
-      resetSimulation();
     }
   }
 
@@ -530,10 +561,14 @@ namespace App {
     for (int j = 0; j < ny; j++) {
       for (int i = 0; i < nx; i++) {
         float value = getBlockValue(m_block, m_viewType, i + 1, j + 1);
-        minMax.x    = std::min(minMax.x, value);
-        minMax.y    = std::max(minMax.y, value);
+        int   index = j * nx + i;
 
-        m_heightMapData[j * nx + i] = value;
+        if (!m_vertices[index].isDry) {
+          minMax.x = std::min(minMax.x, value);
+          minMax.y = std::max(minMax.y, value);
+        }
+
+        m_heightMapData[index] = value;
       }
     }
 
@@ -600,12 +635,12 @@ namespace App {
       m_showScenarioSelection = !m_showScenarioSelection;
       break;
     case Core::Key::Enter:
-      if (m_showScenarioSelection)
+      if (m_showScenarioSelection && !ImGui::GetIO().NavVisible)
         loadScenario();
       break;
     case Core::Key::Space:
-      if (!ImGui::GetIO().NavVisible)
-        m_playing = !m_playing;
+      ImGui::SetNavCursorVisible(false);
+      startSimulation();
       break;
     case Core::Key::R:
       resetSimulation();
@@ -639,7 +674,7 @@ namespace App {
       m_camera.setType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
       break;
     case Core::Key::X:
-      m_camera.reset();
+      resetCamera();
       break;
     case Core::Key::D:
       m_autoScaleDataRange = !m_autoScaleDataRange;
@@ -658,6 +693,9 @@ namespace App {
       break;
     case Core::Key::F:
       applyDisplacement();
+      break;
+    case Core::Key::E:
+      m_setFocusValueScale = true;
       break;
     }
 
@@ -680,9 +718,9 @@ namespace App {
         std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
         std::string filename   = filepath.filename().string();
         if (filename.find("bath") != std::string::npos) {
-          strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile));
+          strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile) - 1);
         } else if (filename.find("displ") != std::string::npos) {
-          strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile));
+          strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile) - 1);
         }
       }
     }
@@ -691,7 +729,7 @@ namespace App {
 
   bgfx::VertexLayout CellVertex::layout;
 
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 1, bgfx::AttribType::Uint8).end(); };
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Weight, 1, bgfx::AttribType::Uint8, true).end(); };
 
 } // namespace App
 

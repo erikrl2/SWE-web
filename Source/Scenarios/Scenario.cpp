@@ -25,7 +25,7 @@
 #include <cmath>
 
 RealType Scenarios::Scenario::getWaterHeight([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const {
-  return -std::min(getBathymetryBeforeDisplacement(x, y), RealType(0.0));
+  return -std::fmin(getBathymetryBeforeDisplacement(x, y), RealType(0.0));
 }
 
 RealType Scenarios::Scenario::getMomentumU([[maybe_unused]] RealType x, [[maybe_unused]] RealType y) const { return RealType(0.0); }

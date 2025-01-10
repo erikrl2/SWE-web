@@ -41,6 +41,8 @@ namespace Blocks {
      */
     void updateUnknowns(RealType dt) override;
 
+    bool hasError() override;
+
   private:
     /** @brief Net updates for water height (left-going waves) */
     Float2D<RealType> hNetUpdatesLeft_;

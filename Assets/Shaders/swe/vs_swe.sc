@@ -1,3 +1,4 @@
+$input  a_weight
 $output v_color0
 
 #include "common.sh"
@@ -27,9 +28,14 @@ void main() {
   vec2 gridPos  = vec2(mod(id, nx), id / nx);
   vec2 texCoord = (gridPos + 0.5) / gridSize;
 
-  float height = texture2DLod(s_heightMap, texCoord, 0.0).r * valueScale;
+  float height = texture2DLod(s_heightMap, texCoord, 0.0).r;
 
-  vec3 worldPos = vec3(gridStart + gridPos * cellSize, height);
+  float z = height;
+  if (a_weight == 0.0) {
+    z *= valueScale; // only scale wet cells
+  }
+
+  vec3 worldPos = vec3(gridStart + gridPos * cellSize, z);
 
   gl_Position = mul(u_modelViewProj, vec4(worldPos, 1.0));
 
@@ -39,11 +45,12 @@ void main() {
       dataRange.y += 0.1;
     }
     dataRange *= valueScale;
-    float colFactor = clamp((worldPos.z - dataRange.x) / (dataRange.y - dataRange.x), 0.0, 1.0);
-    if (colFactor < 0.5) {
-      v_color0 = mix(u_color1, u_color2, colFactor / 0.5);
+    height *= valueScale;
+    float lerpValue = clamp((height - dataRange.x) / (dataRange.y - dataRange.x), 0.0, 1.0);
+    if (lerpValue < 0.5) {
+      v_color0 = mix(u_color1, u_color2, lerpValue * 2.0);
     } else {
-      v_color0 = mix(u_color2, u_color3, (colFactor - 0.5) / 0.5);
+      v_color0 = mix(u_color2, u_color3, (lerpValue - 0.5) * 2.0);
     }
   }
 }

@@ -25,9 +25,9 @@ namespace Scenarios {
 
     RealType getBoundaryPos(BoundaryEdge edge) const override {
       if (edge == BoundaryEdge::Left || edge == BoundaryEdge::Bottom) {
-        return RealType(0.5);
+        return RealType(-0.5);
       } else {
-        return RealType(n_ + 0.5);
+        return RealType(n_ - 0.5);
       }
     }
 

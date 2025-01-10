@@ -11,6 +11,12 @@
 #include <cassert>
 #include <cmath>
 
+#define EXIT_IF_NOT(condition) \
+  if (!(condition)) { \
+    Error = true; \
+    return; \
+  }
+
 namespace Solvers {
 
   void Fwave::computeNetUpdates(
@@ -47,8 +53,8 @@ namespace Solvers {
     }
 
     // Assert that heights are non-negative
-    assert(hLeft >= RealType(0.0));
-    assert(hRight >= RealType(0.0));
+    EXIT_IF_NOT(hLeft >= RealType(0.0));
+    EXIT_IF_NOT(hRight >= RealType(0.0));
 
     // Avoid division by zero in velocity computation
     assert((hLeft > RealType(0.0)) || (huLeft == RealType(0.0)));
