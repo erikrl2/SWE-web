@@ -11,6 +11,7 @@
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
 #include "Scenarios/TsunamiScenario.hpp"
+#include "Scenarios/RealisticScenario.hpp"
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
 #include "Utils.hpp"
@@ -330,6 +331,26 @@ namespace App {
       [[fallthrough]];
     }
 #endif
+    case ScenarioType::RealisticTsunami: {
+        const auto* s = new Scenarios::RealisticScenario(
+            "./Data/tohoku_bath.bin",  
+            "./Data/tohoku_displ.bin", 
+            m_boundaryType);
+
+        if (s->success()) {
+            m_scenario = s;
+            m_autoScaleDataRange = false;
+            m_util.x = -0.01f;
+            m_util.y = 0.01f;
+            m_util.z = 1.0f;
+            break;
+        }
+        warn("Failed loading scenario");
+        delete s;
+        m_scenarioType = ScenarioType::None;
+        [[fallthrough]];
+    }
+
     case ScenarioType::None: {
       m_dimensions  = {};
       m_gridData    = {};

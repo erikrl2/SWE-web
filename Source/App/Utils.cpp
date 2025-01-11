@@ -14,6 +14,8 @@ namespace App {
 #endif
     case ScenarioType::ArtificialTsunami:
       return "Artificial Tsunami";
+    case ScenarioType::RealisticTsunami:
+      return "Realistic Tsunami";
     case ScenarioType::Test:
       return "Test";
     case ScenarioType::None:

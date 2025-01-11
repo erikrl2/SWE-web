@@ -6,6 +6,7 @@ enum class ScenarioType {
   Tsunami, // Requires NetCDF which isn't available with Emscripten
 #endif
   ArtificialTsunami,
+  RealisticTsunami,
   Test,
   Count
 };
