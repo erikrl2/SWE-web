@@ -79,16 +79,13 @@ namespace Core {
 #endif
 
 #ifdef __EMSCRIPTEN__
-    double devicePixelRatio = emscripten_get_device_pixel_ratio();
     double w, h;
-    emscripten_get_element_css_size(".app", &w, &h);
-    w *= devicePixelRatio;
-    h *= devicePixelRatio;
-    emscripten_set_canvas_element_size("#canvas", (int)w, (int)h);
-    glfwSetWindowSize(s_app->m_window, (int)w, (int)h);
-#endif
-
+    emscripten_get_element_css_size("#canvas", &w, &h);
+    m_windowSize.x = (int)w;
+    m_windowSize.y = (int)h;
+#else
     glfwGetWindowSize(m_window, &m_windowSize.x, &m_windowSize.y);
+#endif
     bgfxInit.resolution.width  = (uint32_t)m_windowSize.x;
     bgfxInit.resolution.height = (uint32_t)m_windowSize.y;
     bgfxInit.resolution.reset  = m_resetFlags;
@@ -153,16 +150,11 @@ namespace Core {
 
 #ifdef __EMSCRIPTEN__
   bool Application::emscriptenResizeCallback(int, const EmscriptenUiEvent* e, void*) {
-    double devicePixelRatio = emscripten_get_device_pixel_ratio();
-
-    int width  = (int)(e->windowInnerWidth * devicePixelRatio);
-    int height = (int)(e->windowInnerHeight * devicePixelRatio);
+    int width  = (int)e->windowInnerWidth;
+    int height = (int)e->windowInnerHeight;
 
     s_app->m_windowSize.x = width;
     s_app->m_windowSize.y = height;
-
-    emscripten_set_canvas_element_size("#canvas", width, height);
-    glfwSetWindowSize(s_app->m_window, width, height);
 
     bgfx::reset((uint32_t)width, (uint32_t)height, s_app->m_resetFlags);
     bgfx::setViewRect(s_app->m_mainView, 0, 0, bgfx::BackbufferRatio::Equal);

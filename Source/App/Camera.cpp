@@ -91,7 +91,7 @@ namespace App {
 
   void Camera::onMouseScrolled(float delta) {
     if (!m_mouseOverUI) {
-      zoom(delta * 10.0f);
+      zoom(delta * 20.0f);
     }
   }
 

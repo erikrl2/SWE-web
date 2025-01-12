@@ -201,10 +201,11 @@ namespace App {
     ImGui::SetNextWindowSize(ImVec2(310, 200), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 310, 0));
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
-    int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
+    int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus
+                          | ImGuiWindowFlags_NoFocusOnAppearing;
     ImGui::Begin("Key Bindings", nullptr, helpWindowFlags);
-    static const char* helpText = 
-R"(C         : hide control window
+    static const char* helpText =
+      R"(C         : hide control window
 S         : open scenario selection
 0-9       : select scenario
 Enter     : load selected scenario

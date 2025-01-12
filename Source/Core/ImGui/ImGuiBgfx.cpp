@@ -174,6 +174,9 @@ namespace Core {
         default:
           ImGui_ImplGlfw_InitForOther((GLFWwindow*)window, true);
         }
+#ifdef __EMSCRIPTEN__
+        ImGui_ImplGlfw_InstallEmscriptenCallbacks((GLFWwindow*)window, "#canvas");
+#endif
 
         m_program = bgfx::createProgram(bgfx::createShader(bgfx::makeRef(vs_imgui, sizeof(vs_imgui))), bgfx::createShader(bgfx::makeRef(fs_imgui, sizeof(fs_imgui))), true);
 
