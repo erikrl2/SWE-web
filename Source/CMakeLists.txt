@@ -3,6 +3,8 @@ add_library(${SWE_PROJECT_NAME} OBJECT)
 file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS "*")
 list(FILTER SOURCES EXCLUDE REGEX ".*EntryPoint\\.cpp$")
 
+source_group(TREE ${CMAKE_CURRENT_SOURCE_DIR} FILES ${SOURCES})
+
 # Add shaders as sources to trigger recompilation when they change
 set(SHADER_DIR ${CMAKE_SOURCE_DIR}/Assets/Shaders CACHE PATH "Path to shader files")
 file(GLOB_RECURSE SHADER_SOURCES CONFIGURE_DEPENDS "${SHADER_DIR}/*.sc")
@@ -21,7 +23,7 @@ add_dependencies(${SWE_PROJECT_NAME} compile_shaders)
 add_executable(${SWE_PROJECT_NAME}-App Core/EntryPoint.cpp)
 target_link_libraries(${SWE_PROJECT_NAME}-App PRIVATE ${SWE_PROJECT_NAME})
 
-if(EMSCRIPTEN)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_link_options(${SWE_PROJECT_NAME}-App PRIVATE
     -sMAX_WEBGL_VERSION=2
     -sGL_ENABLE_GET_PROC_ADDRESS

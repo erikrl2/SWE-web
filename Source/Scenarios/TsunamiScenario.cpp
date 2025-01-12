@@ -1,4 +1,4 @@
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
 #include "TsunamiScenario.hpp"
 
 #include <cassert>

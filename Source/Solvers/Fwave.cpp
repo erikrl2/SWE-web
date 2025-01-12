@@ -52,13 +52,9 @@ namespace Solvers {
       huRight = -huLeft;
     }
 
-    // Assert that heights are non-negative
-    EXIT_IF_NOT(hLeft >= RealType(0.0));
-    EXIT_IF_NOT(hRight >= RealType(0.0));
-
-    // Avoid division by zero in velocity computation
-    assert((hLeft > RealType(0.0)) || (huLeft == RealType(0.0)));
-    assert((hRight > RealType(0.0)) || (huRight == RealType(0.0)));
+    // assert that heights are positive
+    EXIT_IF_NOT(hLeft > RealType(0.0));
+    EXIT_IF_NOT(hRight > RealType(0.0));
 
     /**
      * Step 1 / 2: The initial discontinuity at x = 0 evolves into two waves, which can either be shock waves or rarefaction waves.

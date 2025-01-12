@@ -238,7 +238,7 @@ namespace App {
         m_selectedDimensions.y = std::clamp(m_selectedDimensions.y, 2, 2000);
       }
 
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
       if (m_selectedScenarioType == ScenarioType::Tsunami) {
         ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
@@ -312,7 +312,7 @@ namespace App {
       m_util.z             = 1000.0f;
       break;
     }
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
     case ScenarioType::Tsunami: {
       const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions.x, m_dimensions.y);
 
@@ -711,7 +711,7 @@ namespace App {
   void SweApp::onMouseScrolled(float, float dy) { m_camera.onMouseScrolled(dy); }
 
   void SweApp::onFileDropped([[maybe_unused]] std::string_view path) {
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
       std::filesystem::path filepath(path);
       if (filepath.extension() == ".nc") {
@@ -729,7 +729,7 @@ namespace App {
 
   bgfx::VertexLayout CellVertex::layout;
 
-  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Weight, 1, bgfx::AttribType::Uint8, true).end(); };
+  void CellVertex::init() { layout.begin().add(bgfx::Attrib::Position, 1, bgfx::AttribType::Uint8, true).end(); };
 
 } // namespace App
 

@@ -1,4 +1,4 @@
-$input  a_weight
+$input  a_position // works as "isDry" bool
 $output v_color0
 
 #include "common.sh"
@@ -31,7 +31,7 @@ void main() {
   float height = texture2DLod(s_heightMap, texCoord, 0.0).r;
 
   float z = height;
-  if (a_weight == 0.0) {
+  if (a_position == 0.0) {
     z *= valueScale; // only scale wet cells
   }
 

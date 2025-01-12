@@ -97,7 +97,7 @@ namespace App {
     float        m_timeScale         = 60.0f;
     float        m_endSimulationTime = 0.0;
 
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
     char m_bathymetryFile[128]   = {};
     char m_displacementFile[128] = {};
 #endif

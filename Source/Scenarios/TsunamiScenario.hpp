@@ -1,6 +1,6 @@
 #pragma once
 
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
 #include <string>
 
 #include "Scenario.hpp"

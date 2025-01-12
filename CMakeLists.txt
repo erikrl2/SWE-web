@@ -25,14 +25,6 @@ set(CMAKE_CXX_VISIBILITY_INLINES_HIDDEN YES)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE INTERNAL "")
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Emscripten")
-  message(STATUS "Configuring for Web using Emscripten")
-  set(EMSCRIPTEN TRUE)
-else()
-  message(STATUS "Configuring for Desktop")
-  set(EMSCRIPTEN FALSE)
-endif()
-
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type: Debug, Release, RelWithDebInfo, MinSizeRel")
   message(STATUS "Build type not specified: defaulting to Debug")
@@ -51,47 +43,65 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 add_library(SWE-Interface INTERFACE)
 target_compile_features(SWE-Interface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
-target_compile_options(SWE-Interface INTERFACE
-  -W
-  -Wall
-  -Wextra
-  -Wpedantic
-)
+if(MSVC)
+  target_compile_options(SWE-Interface INTERFACE /W4)
+else()
+  target_compile_options(SWE-Interface INTERFACE -W -Wall -Wextra -Wpedantic)
+endif()
 
 option(ENABLE_SINGLE_PRECISION "Enable single floating-point precision" OFF)
 if(ENABLE_SINGLE_PRECISION)
   target_compile_definitions(SWE-Interface INTERFACE ENABLE_SINGLE_PRECISION)
 endif()
 
-if(NOT EMSCRIPTEN)
-  find_package(glfw3 REQUIRED)
+if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  set(ENABLE_NETCDF OFF) # Not supported
+  set(PLATFORM asm.js)
+  set(SC_PROFILE 300_es) # OpenGLES
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  set(PLATFORM windows)
+  set(SC_PROFILE "s_5_0 -O3") # Direct3D
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  set(PLATFORM osx)
+  set(SC_PROFILE metal) # Metal
+else() # Linux
+  set(PLATFORM linux)
+  set(SC_PROFILE spirv) # Vulkan
+endif()
+
+option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
+if(ENABLE_NETCDF)
   find_package(NetCDF REQUIRED)
+  target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
   target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
-  target_link_libraries(SWE-Interface INTERFACE glfw ${NETCDF_LIBRARIES})
+  target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
+
+  if(PLATFORM STREQUAL "windows" AND CMAKE_GENERATOR MATCHES "Visual Studio" AND MSVC)
+    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>) # TODO: Get MD(d) working
+    find_package(HDF5 REQUIRED)
+    find_package(CURL REQUIRED)
+    target_link_libraries(SWE-Interface INTERFACE hdf5::hdf5-static hdf5::hdf5_hl-static CURL::libcurl_static)
+    # How to use:
+    #   vcpkg install netcdf-cxx4:x64-windows-static
+    #   cmake -G"Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ..
+    #
+    # When using mingw64, netcdf-cxx4:x64-mingw-dynamic can be used
+  endif()
+endif()
+
+if(NOT PLATFORM STREQUAL "asm.js")
+  find_package(glfw3 REQUIRED)
+  target_link_libraries(SWE-Interface INTERFACE glfw)
 endif()
 
 find_package(bgfx REQUIRED)
 find_package(ImGui REQUIRED)
 target_link_libraries(SWE-Interface INTERFACE bgfx bx imgui)
 
-if(EMSCRIPTEN)
-  set(SC_PLATFORM asm.js)
-  set(SC_PROFILE 300_es) # OpenGLES
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL Windows)
-  set(SC_PLATFORM windows)
-  set(SC_PROFILE "s_5_0 -O3") # Direct3D
-elseif(${CMAKE_SYSTEM_NAME} STREQUAL Darwin)
-  set(SC_PLATFORM osx)
-  set(SC_PROFILE metal) # Metal
-else() # Linux
-  set(SC_PLATFORM linux)
-  set(SC_PROFILE spirv) # Vulkan
-endif()
-
 # NOTE: Clean header files with `make -f Scripts/shader.mk clean` before building on a different platform
 add_custom_target(
   compile_shaders ALL
-  COMMAND ${CMAKE_MAKE_PROGRAM} -f shader.mk PLATFORM=${SC_PLATFORM} PROFILE=${SC_PROFILE} BGFX_DIR=${BGFX_DIR}/ | tee
+  COMMAND make -f shader.mk PLATFORM=${PLATFORM} PROFILE=${SC_PROFILE} BGFX_DIR=${BGFX_DIR}/ | tee
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/Scripts
   COMMENT "Compiling shaders to header files"
 )
