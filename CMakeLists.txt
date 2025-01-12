@@ -73,17 +73,13 @@ endif()
 option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
 if(ENABLE_NETCDF)
   if(NOT MSVC)
-    find_package(NetCDF REQUIRED)
+    find_package(netCDF REQUIRED)
     target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
     target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
-  else()
-    find_package(NetCDFCxx REQUIRED)
+  else() # using vcpkg on Windows with triplet x64-windows-static
+    find_package(netCDF CONFIG REQUIRED)
+    find_package(netCDFCxx CONFIG REQUIRED)
     target_link_libraries(SWE-Interface INTERFACE netCDF::netcdf-cxx4)
-    # How to use:
-    #   vcpkg install netcdf-cxx4:x64-windows-static
-    #   cmake -G"Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ..
-    #
-    # When using mingw64, netcdf-cxx4:x64-mingw-dynamic can be used
   endif()
   target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
 endif()
@@ -94,7 +90,7 @@ if(NOT PLATFORM STREQUAL "asm.js")
 endif()
 
 find_package(bgfx REQUIRED)
-find_package(ImGui REQUIRED)
+find_package(imgui REQUIRED)
 target_link_libraries(SWE-Interface INTERFACE bgfx bx imgui)
 
 # NOTE: Clean header files with `make -f Scripts/shader.mk clean` before building on a different platform

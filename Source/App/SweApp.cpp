@@ -198,8 +198,8 @@ namespace App {
 
     ImGui::End(); // Controls
 
-    ImGui::SetNextWindowSize(ImVec2(311, 200), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 311, 0), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(310, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 310, 0));
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
     int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
     ImGui::Begin("Key Bindings", nullptr, helpWindowFlags);

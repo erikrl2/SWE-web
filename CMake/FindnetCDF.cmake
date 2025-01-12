@@ -30,4 +30,4 @@ set(NETCDF_LIBRARIES "${NetCDF_libs}" CACHE STRING "All NetCDF libraries require
 
 # handle the QUIETLY and REQUIRED arguments and set NETCDF_FOUND to TRUE if all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(NetCDF DEFAULT_MSG NETCDF_LIBRARIES NETCDF_INCLUDES)
+find_package_handle_standard_args(netCDF DEFAULT_MSG NETCDF_LIBRARIES NETCDF_INCLUDES)
