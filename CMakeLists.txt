@@ -67,7 +67,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
   set(SC_PROFILE metal) # Metal
 else() # Linux
   set(PLATFORM linux)
-  set(SC_PROFILE spirv) # Vulkan
+  set(SC_PROFILE 130) # OpenGL
 endif()
 
 option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)

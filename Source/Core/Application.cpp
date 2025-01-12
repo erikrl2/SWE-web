@@ -62,7 +62,7 @@ namespace Core {
     bgfxInit.platformData.nwh  = (void*)uintptr_t(glfwGetX11Window(m_window));
     bgfxInit.platformData.ndt  = glfwGetX11Display();
     bgfxInit.platformData.type = bgfx::NativeWindowHandleType::Default;
-    bgfxInit.type              = bgfx::RendererType::Vulkan;
+    bgfxInit.type              = bgfx::RendererType::OpenGL;
 #elif BX_PLATFORM_OSX
     bgfxInit.platformData.nwh  = glfwGetCocoaWindow(m_window);
     bgfxInit.platformData.ndt  = NULL;
