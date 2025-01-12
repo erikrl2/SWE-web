@@ -41,7 +41,7 @@ namespace Core {
 
     uint32_t m_debugFlags = BGFX_DEBUG_NONE;
     uint32_t m_resetFlags = BGFX_RESET_VSYNC;
-    uint32_t m_clearFlags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH;
+    uint16_t m_clearFlags = BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH;
 
   private:
     void run();

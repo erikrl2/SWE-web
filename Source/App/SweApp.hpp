@@ -34,7 +34,7 @@ namespace App {
     void initializeBlock();
     void createGrid(Vec2i n);
     void loadScenario();
-    void startSimulation();
+    void startStopSimulation();
     void resetSimulation();
     void setUtilDataRange();
     void resetCamera();
@@ -107,7 +107,7 @@ namespace App {
 
     Camera m_camera{m_windowSize, m_boundaryPos, m_cameraClipping};
 
-    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS;
+    uint64_t m_stateFlags = BGFX_STATE_WRITE_MASK | BGFX_STATE_DEPTH_TEST_LESS | BGFX_STATE_PT_LINES;
 
     bool         m_showControls          = true;
     bool         m_showScenarioSelection = false;

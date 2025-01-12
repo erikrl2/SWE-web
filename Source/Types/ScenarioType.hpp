@@ -2,10 +2,12 @@
 
 enum class ScenarioType {
   None,
+#ifndef NDEBUG
+  Test,
+#endif
 #ifdef ENABLE_NETCDF
-  Tsunami, // Requires NetCDF which isn't available with Emscripten
+  Tsunami,
 #endif
   ArtificialTsunami,
-  Test,
   Count
 };

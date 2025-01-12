@@ -44,6 +44,7 @@ add_library(SWE-Interface INTERFACE)
 target_compile_features(SWE-Interface INTERFACE cxx_std_${CMAKE_CXX_STANDARD})
 
 if(MSVC)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
   target_compile_options(SWE-Interface INTERFACE /W4)
 else()
   target_compile_options(SWE-Interface INTERFACE -W -Wall -Wextra -Wpedantic)
@@ -71,22 +72,20 @@ endif()
 
 option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
 if(ENABLE_NETCDF)
-  find_package(NetCDF REQUIRED)
-  target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
-  target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
-  target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
-
-  if(PLATFORM STREQUAL "windows" AND CMAKE_GENERATOR MATCHES "Visual Studio" AND MSVC)
-    set(CMAKE_MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>) # TODO: Get MD(d) working
-    find_package(HDF5 REQUIRED)
-    find_package(CURL REQUIRED)
-    target_link_libraries(SWE-Interface INTERFACE hdf5::hdf5-static hdf5::hdf5_hl-static CURL::libcurl_static)
+  if(NOT MSVC)
+    find_package(NetCDF REQUIRED)
+    target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
+    target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
+  else()
+    find_package(NetCDFCxx REQUIRED)
+    target_link_libraries(SWE-Interface INTERFACE netCDF::netcdf-cxx4)
     # How to use:
     #   vcpkg install netcdf-cxx4:x64-windows-static
     #   cmake -G"Visual Studio 17 2022" -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static ..
     #
     # When using mingw64, netcdf-cxx4:x64-mingw-dynamic can be used
   endif()
+  target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
 endif()
 
 if(NOT PLATFORM STREQUAL "asm.js")

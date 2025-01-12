@@ -8,14 +8,16 @@ namespace App {
 
   std::string scenarioTypeToString(ScenarioType type) {
     switch (type) {
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
     case ScenarioType::Tsunami:
       return "Tsunami";
 #endif
     case ScenarioType::ArtificialTsunami:
       return "Artificial Tsunami";
+#ifndef NDEBUG
     case ScenarioType::Test:
       return "Test";
+#endif
     case ScenarioType::None:
       return "None";
     default:

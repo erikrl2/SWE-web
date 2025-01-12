@@ -59,7 +59,7 @@ namespace App {
       return;
 
     // ImGui::SetNextWindowPos(ImVec2(20, m_windowHeight - 320), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration);
+    ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     ImGui::SeparatorText("Simulation");
 
@@ -75,7 +75,7 @@ namespace App {
 
     ImGui::SameLine();
     if (ImGui::Button(!m_playing ? "Start" : "Stop")) {
-      startSimulation();
+      startStopSimulation();
     }
 
     ImGui::SameLine();
@@ -196,28 +196,39 @@ namespace App {
     ImGui::SameLine();
     ImGui::TextDisabled("FPS: %.0f", ImGui::GetIO().Framerate);
 
-    ImGui::SameLine(ImGui::GetWindowSize().x - 30);
-    ImGui::TextDisabled("(?)");
-    static const char* helpText = R"(Key Bindings:
-
-  C         : hide control window
-  S         : open scenario selection
-  Space     : start/stop simulation
-  R         : reset simulation
-  F         : apply displacement
-  H/U/V/B/A : select view type
-  O/W       : select boundary type
-  Q         : auto rescale data range
-  T         : switch camera type
-  X         : reset camera
-  D         : auto scale data range
-  L         : show lines
-  I         : show stats
-  P         : toggle vsync (desktop only)
-)";
-    ImGui::SetItemTooltip("%s", helpText);
-
     ImGui::End(); // Controls
+
+    ImGui::SetNextWindowSize(ImVec2(311, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 311, 0), ImGuiCond_FirstUseEver);
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
+    int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
+    ImGui::Begin("Key Bindings", nullptr, helpWindowFlags);
+    static const char* helpText = 
+R"(C         : hide control window
+S         : open scenario selection
+0-9       : select scenario
+Enter     : load selected scenario
+Space     : start/stop simulation
+R         : reset simulation
+F         : apply displacement
+E         : set nav focus on value scale
+H/U/V/B/A : select view type
+O/W       : select boundary type
+Q         : auto rescale data range
+T         : switch camera type
+X         : reset camera
+D         : auto scale data range
+L         : show lines
+I         : show stats
+P         : toggle vsync (desktop only)
+TAB       : nav focus next
+Shift+TAB : nav focus prev
+Enter     : nav activate
+ESC       : nav cancel
+)";
+    ImGui::TextDisabled("%s", helpText);
+    ImGui::End();
+    ImGui::PopStyleColor();
 
     if (m_showScenarioSelection) {
       // ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
@@ -298,6 +309,7 @@ namespace App {
     }
 
     switch (m_scenarioType) {
+#ifndef NDEBUG
     case ScenarioType::Test: {
       m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
 
@@ -305,6 +317,7 @@ namespace App {
       m_util.z             = 1.0f; // Value scale
       break;
     }
+#endif
     case ScenarioType::ArtificialTsunami: {
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
 
@@ -438,7 +451,7 @@ namespace App {
     initializeBlock();
   }
 
-  void SweApp::startSimulation() {
+  void SweApp::startStopSimulation() {
     m_playing = !m_playing;
     m_message = "";
   }
@@ -560,7 +573,7 @@ namespace App {
 
     for (int j = 0; j < ny; j++) {
       for (int i = 0; i < nx; i++) {
-        float value = getBlockValue(m_block, m_viewType, i + 1, j + 1);
+        float value = (float)getBlockValue(m_block, m_viewType, i + 1, j + 1);
         int   index = j * nx + i;
 
         if (!m_vertices[index].isDry) {
@@ -640,7 +653,7 @@ namespace App {
       break;
     case Core::Key::Space:
       ImGui::SetNavCursorVisible(false);
-      startSimulation();
+      startStopSimulation();
       break;
     case Core::Key::R:
       resetSimulation();
