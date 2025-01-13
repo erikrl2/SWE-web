@@ -331,11 +331,13 @@ namespace App {
       [[fallthrough]];
     }
 #endif
-    case ScenarioType::RealisticTsunami: {
+    case ScenarioType::RealisticScenario: {
         const auto* s = new Scenarios::RealisticScenario(
-            "./Data/tohoku_bath.bin",  
-            "./Data/tohoku_displ.bin", 
-            m_boundaryType);
+            "./data/tohoku_bath.bin",  
+            "./data/tohoku_displ.bin", 
+            m_boundaryType,
+            m_dimensions.x, 
+            m_dimensions.y);
 
         if (s->success()) {
             m_scenario = s;

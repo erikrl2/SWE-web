@@ -1,22 +1,26 @@
 #pragma once
-#include "Scenario.hpp"
-#include "../Types/Float2D.hpp"
 
 #include <string>
 
+#include "Scenario.hpp"
+#include "Types/Float2D.hpp"
+
 namespace Scenarios {
-class RealisticScenario : public Scenario {
-public:
-    RealisticScenario(const std::string& bathymetryFile, 
-                      const std::string& displacementFile, 
-                      BoundaryType boundaryType);
-    
-    virtual RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
-    virtual RealType getDisplacement(RealType x, RealType y) const override;
-    virtual RealType getBoundaryPos(BoundaryEdge edge) const override;
+
+  class RealisticScenario: public Scenario {
+  public:
+    RealisticScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY);
+    ~RealisticScenario() override = default;
+
+    RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
+    RealType getDisplacement(RealType x, RealType y) const override;
+
+    BoundaryType getBoundaryType(BoundaryEdge) const override { return boundaryType_; }
+    RealType     getBoundaryPos(BoundaryEdge edge) const override { return boundaryPos_[edge]; }
+
     bool success() const { return success_; }
 
-private:
+  private:
     struct FileHeader {
         uint32_t nX;
         uint32_t nY;
@@ -26,20 +30,25 @@ private:
         double dy;
     };
 
-    bool loadBinaryData(const std::string& filename, 
-                       FileHeader& header,
-                       Float2D<RealType>& data);
+    bool loadBinaryData(const std::string& filename, FileHeader& header, Float2D<RealType>& data);
 
     BoundaryType boundaryType_;
-    
-    // Bathymetry data
-    FileHeader bHeader_;
-    Float2D<RealType> bathymetry_;
-    
-    // Displacement data
-    FileHeader dHeader_;
-    Float2D<RealType> displacement_;
-    
+    int          nX_, nY_;
+    RealType     dX_, dY_;
+
+    Float2D<RealType> b_;
+    int               bNX_, bNY_;
+    double            boundaryPos_[4];
+    RealType          originX_, originY_;
+    RealType          bDX_, bDY_;
+
+    Float2D<RealType> d_;
+    int               dNX_, dNY_;
+    double            dBoundaryPos_[4];
+    RealType          dOriginX_, dOriginY_;
+    RealType          dDX_, dDY_;
+
     bool success_ = true;
-};
-}
+  };
+
+} // namespace Scenarios
