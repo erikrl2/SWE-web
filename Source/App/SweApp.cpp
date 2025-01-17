@@ -222,10 +222,11 @@ D         : auto scale data range
 L         : show lines
 I         : show stats
 P         : toggle vsync (desktop only)
-TAB       : nav focus next
-Shift+TAB : nav focus prev
-Enter     : nav activate
-ESC       : nav cancel
+TAB       : nav focus next item
+Shift+TAB : nav focus prev item
+Ctrl+TAB  : nav focus next window
+Enter     : nav activate item
+ESC       : nav cancel item
 )";
     ImGui::TextDisabled("%s", helpText);
     ImGui::End();
@@ -328,7 +329,7 @@ ESC       : nav cancel
     }
 #ifdef ENABLE_NETCDF
     case ScenarioType::Tsunami: {
-      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType, m_dimensions.x, m_dimensions.y);
+      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
 
       if (s->success()) {
         m_scenario           = s;

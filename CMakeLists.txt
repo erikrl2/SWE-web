@@ -72,14 +72,14 @@ endif()
 
 option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
 if(ENABLE_NETCDF)
-  if(NOT MSVC)
-    find_package(netCDF REQUIRED)
-    target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
-    target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
-  else() # using vcpkg on Windows with triplet x64-windows-static
+  if(CMAKE_TOOLCHAIN_FILE) # VCPKG_TARGET_TRIPLET should be either x64-windows-static, x64-linux or arm64-osx
     find_package(netCDF CONFIG REQUIRED)
     find_package(netCDFCxx CONFIG REQUIRED)
     target_link_libraries(SWE-Interface INTERFACE netCDF::netcdf-cxx4)
+  else() # search for netCDF installed on the system
+    find_package(netCDF REQUIRED)
+    target_include_directories(SWE-Interface INTERFACE ${NETCDF_INCLUDES})
+    target_link_libraries(SWE-Interface INTERFACE ${NETCDF_LIBRARIES})
   endif()
   target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
 endif()

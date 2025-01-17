@@ -5,10 +5,8 @@
 #include <cmath>
 #include <netcdf>
 
-Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY):
-  boundaryType_(boundaryType),
-  nX_(nX),
-  nY_(nY) {
+Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType):
+  boundaryType_(boundaryType) {
   // Bathymetry file
   try {
     std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
@@ -42,10 +40,6 @@ Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, c
 
     originX_ = boundaryPos_[0];
     originY_ = boundaryPos_[2];
-
-    // Determine cell size later used by simulation
-    dX_ = (boundaryPos_[1] - boundaryPos_[0]) / nX_;
-    dY_ = (boundaryPos_[3] - boundaryPos_[2]) / nY_;
 
     b_ = Float2D<RealType>(bNY_, bNX_);
 

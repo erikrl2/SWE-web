@@ -10,7 +10,7 @@ namespace Scenarios {
 
   class TsunamiScenario: public Scenario {
   public:
-    TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY);
+    TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType);
     ~TsunamiScenario() override = default;
 
     RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
@@ -23,8 +23,6 @@ namespace Scenarios {
 
   private:
     BoundaryType boundaryType_;
-    int          nX_, nY_;
-    RealType     dX_, dY_;
 
     Float2D<RealType> b_;
     int               bNX_, bNY_;
