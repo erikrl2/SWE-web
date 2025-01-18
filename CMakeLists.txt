@@ -72,7 +72,7 @@ endif()
 
 option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
 if(ENABLE_NETCDF)
-  if(CMAKE_TOOLCHAIN_FILE) # VCPKG_TARGET_TRIPLET should be either x64-windows-static, x64-linux or arm64-osx
+  if(VCPKG_TOOLCHAIN) # VCPKG_TARGET_TRIPLET should be either x64-windows-static, x64-linux or arm64-osx
     find_package(netCDF CONFIG REQUIRED)
     find_package(netCDFCxx CONFIG REQUIRED)
     target_link_libraries(SWE-Interface INTERFACE netCDF::netcdf-cxx4)
