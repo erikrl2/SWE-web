@@ -64,8 +64,8 @@ vcpkg install netcdf-cxx4:wasm32-emscripten
 cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DVCPKG_TARGET_TRIPLET=wasm32-emscripten
 ```
 
-#### Hint
-It is always possible to disable netcdf linkage with `-DENABLE_NETCDF=OFF` and for compilation with debug symbols use `-DCMAKE_BUILD_TYPE=Debug`.
+#### Notes
+- You can disable netcdf linkage with `-DENABLE_NETCDF=OFF`
 
 ### Compile
 ```sh
@@ -86,3 +86,8 @@ If `emsdk_env.sh` is sourced:
 emrun SWE-App
 ```
 Or else manually host a local server using `python3 -m http.server` or `npx http-server` and open SWE-App.html in the browser.
+
+## Notes
+
+- The emsdk version used for cross compiling needs to be v3.1.74 or later
+- When switching target platform in the same build directory, you might need to clean the compiled bgfx shaders by calling `make -f Scripts/shader.mk clean`

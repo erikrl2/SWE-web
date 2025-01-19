@@ -56,6 +56,8 @@ namespace Core {
     glfwSetScrollCallback(m_window, glfwScrollCallback);
     glfwSetDropCallback(m_window, glfwDropCallback);
 
+    bgfx::renderFrame(); // Indicates bgfx to use single threaded rendering
+
     bgfx::Init bgfxInit;
 
 #if BX_PLATFORM_LINUX
