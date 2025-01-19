@@ -97,9 +97,3 @@ add_custom_target(
 )
 
 add_subdirectory(Source)
-
-file(COPY ${CMAKE_SOURCE_DIR}/Assets/data DESTINATION ${CMAKE_BINARY_DIR})
-
-if(EMSCRIPTEN)
-    file(COPY ${CMAKE_SOURCE_DIR}/Assets/data DESTINATION ${CMAKE_BINARY_DIR}/Public)
-endif()

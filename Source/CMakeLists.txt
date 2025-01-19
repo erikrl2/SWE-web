@@ -29,7 +29,7 @@ if(EMSCRIPTEN)
     -sMAX_WEBGL_VERSION=2
     -sUSE_GLFW=3
     --shell-file=${CMAKE_SOURCE_DIR}/Source/Shell.html
-    --preload-file ../../Assets/data@/data
+    --preload-file ../../Assets/Data@/data
   )
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()

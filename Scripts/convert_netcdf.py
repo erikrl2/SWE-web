@@ -91,7 +91,7 @@ def convert_netcdf_to_binary(input_file, output_file, target_nx=750, target_ny=3
         f.write(struct.pack('II', target_nx, target_ny))
         f.write(struct.pack('dd', origin_x, origin_y))
         f.write(struct.pack('dd', new_dx, new_dy))
-        z_new.T.astype(np.float64).tofile(f)
+        z_new.astype(np.float64).tofile(f)
     
     print(f"Successfully wrote {output_file}")
     return {
