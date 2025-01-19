@@ -21,6 +21,7 @@ Various rendering APIs are used depending on the platform (thanks to bgfx):
 - Selecting and playing scenarios with specified grid sizes
 - Different view types for water height, momentums, bathymetry and surface level (h, hu, hv, b, h+b)
 - Two boundary types *Outflow* and *Wall*
+- Reapply the initial displacement to create new waves at runtime
 - Time scaling to slow down the simulation
 - Specify an *end simulation time* at which the simulation stops
 - Set the data range used for a customizable 3-color gradient or use automatic scaling
