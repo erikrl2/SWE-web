@@ -56,23 +56,34 @@ if(ENABLE_SINGLE_PRECISION)
 endif()
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
-  set(ENABLE_NETCDF OFF) # Not supported
+  message(STATUS "Emscripten detected")
   set(PLATFORM asm.js)
   set(SC_PROFILE 300_es) # OpenGLES
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+  message(STATUS "Windows detected")
   set(PLATFORM windows)
   set(SC_PROFILE "s_5_0 -O3") # Direct3D
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+  message(STATUS "macOS detected")
   set(PLATFORM osx)
   set(SC_PROFILE metal) # Metal
-else() # Linux
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+  message(STATUS "Linux detected")
   set(PLATFORM linux)
   set(SC_PROFILE 130) # OpenGL
+else()
+  message(FATAL_ERROR "Unsupported platform")
 endif()
 
-option(ENABLE_NETCDF "Enable loading NetCDF input files." ON)
+set(ALLOW_NETCDF OFF)
+if(NOT EMSCRIPTEN OR VCPKG_TOOLCHAIN)
+  set(ALLOW_NETCDF ON)
+endif()
+
+include(CMakeDependentOption)
+cmake_dependent_option(ENABLE_NETCDF "Enable loading NetCDF input files." ON ALLOW_NETCDF OFF)
 if(ENABLE_NETCDF)
-  if(VCPKG_TOOLCHAIN) # VCPKG_TARGET_TRIPLET should be either x64-windows-static, x64-linux or arm64-osx
+  if(VCPKG_TOOLCHAIN)
     find_package(netCDF CONFIG REQUIRED)
     find_package(netCDFCxx CONFIG REQUIRED)
     target_link_libraries(SWE-Interface INTERFACE netCDF::netcdf-cxx4)
@@ -84,7 +95,7 @@ if(ENABLE_NETCDF)
   target_compile_definitions(SWE-Interface INTERFACE ENABLE_NETCDF)
 endif()
 
-if(NOT PLATFORM STREQUAL "asm.js")
+if(NOT EMSCRIPTEN)
   find_package(glfw3 REQUIRED)
   target_link_libraries(SWE-Interface INTERFACE glfw)
 endif()
