@@ -19,7 +19,7 @@ namespace Scenarios {
     BoundaryType getBoundaryType(BoundaryEdge) const override { return boundaryType_; }
     RealType     getBoundaryPos(BoundaryEdge edge) const override { return boundaryPos_[edge]; }
 
-    bool success() const { return success_; }
+    bool loadSuccess() const override { return success_; }
 
   private:
     BoundaryType boundaryType_;

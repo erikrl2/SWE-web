@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 #include "Scenario.hpp"
@@ -7,9 +8,13 @@
 
 namespace Scenarios {
 
+  enum class RealisticScenarioType {
+    Tohoku,
+  };
+
   class RealisticScenario: public Scenario {
   public:
-    RealisticScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY);
+    RealisticScenario(RealisticScenarioType scenario, BoundaryType boundaryType);
     ~RealisticScenario() override = default;
 
     RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
@@ -18,23 +23,21 @@ namespace Scenarios {
     BoundaryType getBoundaryType(BoundaryEdge) const override { return boundaryType_; }
     RealType     getBoundaryPos(BoundaryEdge edge) const override { return boundaryPos_[edge]; }
 
-    bool success() const { return success_; }
+    bool loadSuccess() const override { return success_; }
 
   private:
     struct FileHeader {
-        uint32_t nX;
-        uint32_t nY;
-        double originX;
-        double originY;
-        double dx;
-        double dy;
+      uint32_t nX;
+      uint32_t nY;
+      double   originX;
+      double   originY;
+      double   dx;
+      double   dy;
     };
 
     bool loadBinaryData(const std::string& filename, FileHeader& header, Float2D<RealType>& data);
 
     BoundaryType boundaryType_;
-    int          nX_, nY_;
-    RealType     dX_, dY_;
 
     Float2D<RealType> b_;
     int               bNX_, bNY_;

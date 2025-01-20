@@ -5,13 +5,22 @@
 #include <fstream>
 #include <iostream>
 
-Scenarios::RealisticScenario::RealisticScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType, int nX, int nY):
-  boundaryType_(boundaryType),
-  nX_(nX),
-  nY_(nY) {
+Scenarios::RealisticScenario::RealisticScenario(RealisticScenarioType scenario, BoundaryType boundaryType):
+  boundaryType_(boundaryType) {
+  std::string bathymetryFile, displacementFile;
+
+  switch (scenario) {
+  case RealisticScenarioType::Tohoku:
+    bathymetryFile   = "Assets/Data/tohoku_bath.bin";
+    displacementFile = "Assets/Data/tohoku_displ.bin";
+    break;
+  default:
+    assert(false);
+  }
+
   // Bathymetry file
   try {
-    std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+    // std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
     FileHeader header;
 
     if (!loadBinaryData(bathymetryFile, header, b_)) {
@@ -35,12 +44,8 @@ Scenarios::RealisticScenario::RealisticScenario(const std::string& bathymetryFil
     originX_ = boundaryPos_[0];
     originY_ = boundaryPos_[2];
 
-    // Determine cell size later used by simulation
-    dX_ = (boundaryPos_[1] - boundaryPos_[0]) / nX_;
-    dY_ = (boundaryPos_[3] - boundaryPos_[2]) / nY_;
-
   } catch (const std::exception& e) {
-    std::cerr << "Error reading bathymetry file: " << e.what() << std::endl;
+    // std::cerr << "Error reading bathymetry file: " << e.what() << std::endl;
     success_ = false;
     return;
   }
@@ -78,30 +83,28 @@ Scenarios::RealisticScenario::RealisticScenario(const std::string& bathymetryFil
     dOriginY_ = dBoundaryPos_[2];
 
   } catch (const std::exception& e) {
-    std::cerr << "Error reading displacement file: " << e.what() << std::endl;
+    // std::cerr << "Error reading displacement file: " << e.what() << std::endl;
     success_ = false;
     return;
   }
 }
 
-bool Scenarios::RealisticScenario::loadBinaryData(
-    const std::string& filename,
-    FileHeader& header,
-    Float2D<RealType>& data) {
-    
-    std::ifstream file(filename, std::ios::binary);
-    if (!file) return false;
-    
-    // Read header
-    file.read(reinterpret_cast<char*>(&header), sizeof(FileHeader));
-    if (!file) return false;
-    
-    // Allocate and read data
-    data = Float2D<RealType>(header.nY, header.nX);
-    file.read(reinterpret_cast<char*>(data.getData()), 
-              header.nX * header.nY * sizeof(RealType));
-    
-    return file.good();
+bool Scenarios::RealisticScenario::loadBinaryData(const std::string& filename, FileHeader& header, Float2D<RealType>& data) {
+
+  std::ifstream file(filename, std::ios::binary);
+  if (!file)
+    return false;
+
+  // Read header
+  file.read(reinterpret_cast<char*>(&header), sizeof(FileHeader));
+  if (!file)
+    return false;
+
+  // Allocate and read data
+  data = Float2D<RealType>(header.nY, header.nX);
+  file.read(reinterpret_cast<char*>(data.getData()), header.nX * header.nY * sizeof(RealType));
+
+  return file.good();
 }
 
 RealType Scenarios::RealisticScenario::getBathymetryBeforeDisplacement(RealType x, RealType y) const {

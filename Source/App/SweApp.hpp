@@ -31,14 +31,16 @@ namespace App {
     bool isBlockLoaded();
     void destroyBlock();
     void destroyProgram();
+    bool loadScenario();
     void initializeBlock();
     void createGrid(Vec2i n);
-    void loadScenario();
+    void selectScenario();
     void startSimulation();
     void resetSimulation();
     void setUtilDataRange();
     void resetCamera();
     void setCameraTargetCenter();
+    void setSelectedScenarioType(ScenarioType scenarioType);
     void switchView(ViewType viewType);
     void switchBoundary(BoundaryType boundaryType);
     void toggleWireframe();
