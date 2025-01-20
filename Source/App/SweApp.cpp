@@ -318,6 +318,11 @@ ESC       : nav cancel item
       m_util.z   = 200.0f;
       break;
     }
+    case ScenarioType::Chile: {
+      m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Chile, m_boundaryType);
+      m_util.z   = 200.0f;
+      break;
+    }
     case ScenarioType::ArtificialTsunami: {
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
       m_util.z   = 1000.0f;
@@ -508,6 +513,9 @@ ESC       : nav cancel item
     switch (scenarioType) {
     case ScenarioType::Tohoku:
       m_selectedDimensions = {350, 200};
+      break;
+    case ScenarioType::Chile:
+      m_selectedDimensions = {400, 300};
       break;
 #ifndef NDEBUG
     case ScenarioType::Test:

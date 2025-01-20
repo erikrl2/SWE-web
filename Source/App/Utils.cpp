@@ -14,6 +14,8 @@ namespace App {
 #endif
     case ScenarioType::Tohoku:
       return "Tohoku";
+    case ScenarioType::Chile:
+      return "Chile";
     case ScenarioType::ArtificialTsunami:
       return "Artificial";
 #ifndef NDEBUG
