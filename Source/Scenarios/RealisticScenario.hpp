@@ -35,17 +35,17 @@ namespace Scenarios {
       double   dy;
     };
 
-    bool loadBinaryData(const std::string& filename, FileHeader& header, Float2D<RealType>& data);
+    bool loadBinaryData(const std::string& filename, FileHeader& header, Float2D<double>& data);
 
     BoundaryType boundaryType_;
 
-    Float2D<RealType> b_;
+    Float2D<double> b_;
     int               bNX_, bNY_;
     double            boundaryPos_[4];
     RealType          originX_, originY_;
     RealType          bDX_, bDY_;
 
-    Float2D<RealType> d_;
+    Float2D<double> d_;
     int               dNX_, dNY_;
     double            dBoundaryPos_[4];
     RealType          dOriginX_, dOriginY_;

@@ -89,7 +89,7 @@ Scenarios::RealisticScenario::RealisticScenario(RealisticScenarioType scenario, 
   }
 }
 
-bool Scenarios::RealisticScenario::loadBinaryData(const std::string& filename, FileHeader& header, Float2D<RealType>& data) {
+bool Scenarios::RealisticScenario::loadBinaryData(const std::string& filename, FileHeader& header, Float2D<double>& data) {
 
   std::ifstream file(filename, std::ios::binary);
   if (!file)
@@ -101,8 +101,8 @@ bool Scenarios::RealisticScenario::loadBinaryData(const std::string& filename, F
     return false;
 
   // Allocate and read data
-  data = Float2D<RealType>(header.nY, header.nX);
-  file.read(reinterpret_cast<char*>(data.getData()), header.nX * header.nY * sizeof(RealType));
+  data = Float2D<double>(header.nY, header.nX);
+  file.read(reinterpret_cast<char*>(data.getData()), header.nX * header.nY * sizeof(double));
 
   return file.good();
 }
