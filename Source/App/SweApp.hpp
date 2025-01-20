@@ -25,16 +25,16 @@ namespace App {
     void onResize(int width, int height) override;
     void onKeyPressed(Core::KeyCode key) override;
     void onMouseScrolled(float dx, float dy) override;
-    void onFileDropped(std::string_view path) override;
+    void onFileDropped(const char** paths, int count) override;
 
   private:
     bool isBlockLoaded();
     void destroyBlock();
     void destroyProgram();
     bool loadScenario();
-    void initializeBlock();
+    bool initializeBlock();
     void createGrid(Vec2i n);
-    void selectScenario();
+    bool selectScenario();
     void startStopSimulation();
     void resetSimulation();
     void setUtilDataRange();
@@ -48,6 +48,7 @@ namespace App {
     void toggleVsync();
     void applyDisplacement();
     void warn(const char* message);
+    bool addBathDisplFile(std::string_view path);
 
     void simulate(float dt);
     void updateGrid();

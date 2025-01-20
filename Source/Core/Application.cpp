@@ -191,10 +191,6 @@ namespace Core {
 
   void Application::glfwScrollCallback(GLFWwindow*, double xoffset, double yoffset) { s_app->onMouseScrolled(xoffset, yoffset); }
 
-  void Application::glfwDropCallback(GLFWwindow*, int count, const char** paths) {
-    for (int i = 0; i < count; ++i) {
-      s_app->onFileDropped(paths[i]);
-    }
-  }
+  void Application::glfwDropCallback(GLFWwindow*, int count, const char** paths) { s_app->onFileDropped(paths, count); }
 
 } // namespace Core

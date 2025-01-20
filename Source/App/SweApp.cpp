@@ -259,8 +259,14 @@ ESC       : nav cancel item
         ImGui::TextDisabled("(?)");
         ImGui::SetItemTooltip("File name must contain 'bath' or 'displ' to be recognized.");
 
+#ifdef __EMSCRIPTEN__
+        ImGui::BeginDisabled();
+#endif
         ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
         ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
+#ifdef __EMSCRIPTEN__
+        ImGui::EndDisabled();
+#endif
       }
 #endif
 
@@ -306,10 +312,15 @@ ESC       : nav cancel item
 
   bool SweApp::loadScenario() {
     switch (m_scenarioType) {
-#ifndef __EMSCRIPTEN__
+#ifdef ENABLE_NETCDF
     case ScenarioType::NetCDF: {
-      m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
-      m_util.z   = 1.0f;
+      if (fileExists(m_bathymetryFile) && fileExists(m_displacementFile)) {
+        m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
+        m_util.z   = 1.0f;
+      } else {
+        m_scenarioType = ScenarioType::None;
+        warn("Failed loading scenario");
+      }
       break;
     }
 #endif
@@ -361,14 +372,14 @@ ESC       : nav cancel item
     return true;
   }
 
-  void SweApp::initializeBlock() {
+  bool SweApp::initializeBlock() {
     if (isBlockLoaded()) {
       destroyBlock();
     }
 
     bool loaded = loadScenario();
     if (!loaded) {
-      return;
+      return false;
     }
 
     RealType left   = m_scenario->getBoundaryPos(BoundaryEdge::Left);
@@ -402,6 +413,8 @@ ESC       : nav cancel item
     m_util.y            = 0.01f;
     m_message           = "";
     m_endSimulationTime = 0.0;
+
+    return true;
   }
 
   void SweApp::createGrid(Vec2i n) {
@@ -458,14 +471,14 @@ ESC       : nav cancel item
     m_heightMapData = new float[n.x * n.y];
   }
 
-  void SweApp::selectScenario() {
+  bool SweApp::selectScenario() {
     m_scenarioType          = m_selectedScenarioType;
     m_dimensions            = m_selectedDimensions;
     m_simulationTime        = 0.0;
     m_playing               = false;
     m_showScenarioSelection = false;
 
-    initializeBlock();
+    return initializeBlock();
   }
 
   void SweApp::startStopSimulation() { m_playing = !m_playing; }
@@ -756,21 +769,42 @@ ESC       : nav cancel item
 
   void SweApp::onMouseScrolled(float, float dy) { m_camera.onMouseScrolled(dy); }
 
-  void SweApp::onFileDropped([[maybe_unused]] std::string_view path) {
+  void SweApp::onFileDropped([[maybe_unused]] const char** paths, [[maybe_unused]] int count) {
 #ifdef ENABLE_NETCDF
     if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::NetCDF) {
-      std::filesystem::path filepath(path);
-      if (filepath.extension() == ".nc") {
-        std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
-        std::string filename   = filepath.filename().string();
-        if (filename.find("bath") != std::string::npos) {
-          strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile) - 1);
-        } else if (filename.find("displ") != std::string::npos) {
-          strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile) - 1);
+      for (int i = 0; i < count; i++) {
+        addBathDisplFile(paths[i]);
+      }
+    }
+    if (!m_showScenarioSelection && count == 2) {
+      if (addBathDisplFile(paths[0]) && addBathDisplFile(paths[1])) {
+        if (m_bathymetryFile[0] != '\0' && m_displacementFile[0] != '\0') {
+          m_selectedScenarioType = ScenarioType::NetCDF;
+          m_selectedDimensions   = {250, 250};
+          if (!selectScenario()) {
+            m_displacementFile[0] = '\0';
+            m_bathymetryFile[0]   = '\0';
+          }
         }
       }
     }
 #endif
+  }
+
+  bool SweApp::addBathDisplFile(std::string_view path) {
+    std::filesystem::path filepath(path);
+    if (filepath.extension() == ".nc") {
+      std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
+      std::string filename   = filepath.filename().string();
+      if (filename.find("bath") != std::string::npos) {
+        strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile) - 1);
+        return true;
+      } else if (filename.find("displ") != std::string::npos) {
+        strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile) - 1);
+        return true;
+      }
+    }
+    return false;
   }
 
   bgfx::VertexLayout CellVertex::layout;

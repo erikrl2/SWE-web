@@ -27,4 +27,6 @@ namespace App {
 
   std::string removeDriveLetter(const std::string& path);
 
+  bool fileExists(const std::string& path);
+
 } // namespace App

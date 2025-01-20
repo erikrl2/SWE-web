@@ -41,16 +41,16 @@ namespace Scenarios {
     BoundaryType boundaryType_;
 
     Float2D<float> b_;
-    int               bNX_, bNY_;
-    double            boundaryPos_[4];
-    RealType          originX_, originY_;
-    RealType          bDX_, bDY_;
+    int            bNX_, bNY_;
+    double         boundaryPos_[4];
+    RealType       originX_, originY_;
+    RealType       bDX_, bDY_;
 
     Float2D<float> d_;
-    int               dNX_, dNY_;
-    double            dBoundaryPos_[4];
-    RealType          dOriginX_, dOriginY_;
-    RealType          dDX_, dDY_;
+    int            dNX_, dNY_;
+    double         dBoundaryPos_[4];
+    RealType       dOriginX_, dOriginY_;
+    RealType       dDX_, dDY_;
 
     bool success_ = true;
   };

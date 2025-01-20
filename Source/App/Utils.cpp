@@ -41,7 +41,7 @@ namespace App {
     case ViewType::B:
       return "Bathymetry b";
     case ViewType::HPlusB:
-      return "Water Height + Bathymetry)";
+      return "Water Height + Bathymetry";
     default:
       assert(false);
     }
@@ -137,6 +137,11 @@ namespace App {
       return modifiedPath;
     }
     return path;
+  }
+
+  bool fileExists(const std::string& path) {
+    std::filesystem::path fsPath(path);
+    return std::filesystem::exists(fsPath);
   }
 
 } // namespace App

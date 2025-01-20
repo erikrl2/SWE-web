@@ -21,10 +21,10 @@ namespace Core {
     virtual void update(float dt)      = 0;
     virtual void updateImGui(float dt) = 0;
 
-    virtual void onResize(int width, int height)      = 0;
-    virtual void onKeyPressed(KeyCode key)            = 0;
-    virtual void onMouseScrolled(float dx, float dy)  = 0;
-    virtual void onFileDropped(std::string_view path) = 0;
+    virtual void onResize(int width, int height)              = 0;
+    virtual void onKeyPressed(KeyCode key)                    = 0;
+    virtual void onMouseScrolled(float dx, float dy)          = 0;
+    virtual void onFileDropped(const char** paths, int count) = 0;
 
     GLFWwindow* getWindow() const { return m_window; }
 
