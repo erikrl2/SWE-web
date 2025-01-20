@@ -49,3 +49,5 @@ RealType Scenarios::Scenario::getBoundaryPos(BoundaryEdge edge) const {
     return RealType(100.0);
   }
 }
+
+bool Scenarios::Scenario::loadSuccess() const { return true; }

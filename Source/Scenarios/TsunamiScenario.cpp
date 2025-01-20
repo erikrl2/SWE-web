@@ -9,7 +9,7 @@ Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, c
   boundaryType_(boundaryType) {
   // Bathymetry file
   try {
-    std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+    // std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
 
     netCDF::NcFile dataFile(bathymetryFile, netCDF::NcFile::read);
 
@@ -53,7 +53,7 @@ Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, c
 
   // Displacement file
   try {
-    std::cout << "Reading displacement file " << displacementFile << std::endl;
+    // std::cout << "Reading displacement file " << displacementFile << std::endl;
 
     netCDF::NcFile dataFile(displacementFile, netCDF::NcFile::read);
 

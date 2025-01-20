@@ -26,8 +26,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON CACHE INTERNAL "")
 
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type: Debug, Release, RelWithDebInfo, MinSizeRel")
-  message(STATUS "Build type not specified: defaulting to Debug")
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type: Debug, Release, RelWithDebInfo, MinSizeRel" FORCE)
+  message(STATUS "Build type not specified: defaulting to ${CMAKE_BUILD_TYPE}")
 endif()
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

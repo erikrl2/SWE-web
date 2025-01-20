@@ -1,7 +1,5 @@
 # SWE-Web
 
-## About
-
 SWE-Web is an interactive cross-platform 3D application for simulating artificial and realistic tsunamis.
 By supporting [NetCDF](https://en.wikipedia.org/wiki/NetCDF) data input, we can load the [bathymetry](https://en.wikipedia.org/wiki/Bathymetry) of real oceans and the displacement caused by earthquakes and simulate upon that.
 
@@ -33,35 +31,37 @@ Various rendering APIs are used depending on the platform (thanks to bgfx):
 
 ## How to Build
 
+First create a Build directory and navigate into it.
+
 ### Generate Build Files
 
 #### Native Desktop-App using normal/non-vcpkg NetCDF Installation (only supported by Linux and Mac)
 ```sh
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake ..
 ```
 `netcdf-cxx4` (on Linux `netcdf_c++4`) must be installed by package manager.
 
 #### Native Desktop-App using [vcpkg](https://github.com/microsoft/vcpkg) NetCDF Installation (e.g. Windows with Triplet x64-windows-static)
 ```sh
 vcpkg install netcdf-cxx4:x64-windows-static
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
+cmake .. -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 ```
 Other triplets are: `x64-linux`, `x64-osx`, `arm64-osx`, `x64-mingw-dynamic`, etc.
 
 #### Web-App without NetCDF
 ```sh
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
+cmake .. -DCMAKE_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
 ```
 Or, when `emsdk_env.sh` is sourced:
 ```
-emcmake cmake .. -DCMAKE_BUILD_TYPE=Release
+emcmake cmake ..
 ```
 
 #### Web-App with NetCDF
 First apply these [patches](https://gist.github.com/erikrl2/1d3b0ef856538fd09d6fd5c80f74c269) to the hdf5 and netcdf-c vcpkg ports.
 ```sh
 vcpkg install netcdf-cxx4:wasm32-emscripten
-cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DVCPKG_TARGET_TRIPLET=wasm32-emscripten
+cmake .. -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DVCPKG_TARGET_TRIPLET=wasm32-emscripten
 ```
 
 #### Notes

@@ -43,6 +43,7 @@ namespace Core {
     m_window = glfwCreateWindow(m_windowSize.x, m_windowSize.y, m_title.c_str(), NULL, NULL);
     if (!m_window) {
       std::cerr << "Failed to create GLFW window" << std::endl;
+      assert(false);
       return;
     }
 
@@ -94,6 +95,9 @@ namespace Core {
 
     if (!bgfx::init(bgfxInit)) {
       std::cerr << "Failed to initialize bgfx" << std::endl;
+      glfwDestroyWindow(m_window);
+      glfwTerminate();
+      assert(false);
       return;
     }
 

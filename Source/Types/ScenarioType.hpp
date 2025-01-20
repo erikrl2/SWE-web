@@ -2,12 +2,13 @@
 
 enum class ScenarioType {
   None,
+#ifdef ENABLE_NETCDF
+  NetCDF,
+#endif
+  Tohoku,
+  ArtificialTsunami,
 #ifndef NDEBUG
   Test,
 #endif
-#ifdef ENABLE_NETCDF
-  Tsunami,
-#endif
-  ArtificialTsunami,
   Count
 };

@@ -9,11 +9,13 @@ namespace App {
   std::string scenarioTypeToString(ScenarioType type) {
     switch (type) {
 #ifdef ENABLE_NETCDF
-    case ScenarioType::Tsunami:
-      return "Tsunami";
+    case ScenarioType::NetCDF:
+      return "NetCDF";
 #endif
+    case ScenarioType::Tohoku:
+      return "Tohoku";
     case ScenarioType::ArtificialTsunami:
-      return "Artificial Tsunami";
+      return "Artificial";
 #ifndef NDEBUG
     case ScenarioType::Test:
       return "Test";

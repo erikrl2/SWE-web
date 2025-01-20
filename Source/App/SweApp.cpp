@@ -9,6 +9,7 @@
 
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
+#include "Scenarios/RealisticScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
 #include "Scenarios/TsunamiScenario.hpp"
 #include "swe/fs_swe.bin.h"
@@ -58,7 +59,6 @@ namespace App {
     if (!m_showControls)
       return;
 
-    // ImGui::SetNextWindowPos(ImVec2(20, m_windowHeight - 320), ImGuiCond_FirstUseEver);
     ImGui::Begin("Controls", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBringToFrontOnFocus);
 
     ImGui::SeparatorText("Simulation");
@@ -233,14 +233,13 @@ ESC       : nav cancel item
     ImGui::PopStyleColor();
 
     if (m_showScenarioSelection) {
-      // ImGui::SetNextWindowPos(ImVec2(m_windowWidth / 2 - 200, m_windowHeight / 2 - 50), ImGuiCond_FirstUseEver);
       ImGui::Begin("Scenario Selection", &m_showScenarioSelection, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse);
 
       if (ImGui::BeginCombo("Scenario", scenarioTypeToString(m_selectedScenarioType).c_str())) {
         for (int i = 0; i < (int)ScenarioType::Count; i++) {
           ScenarioType type = (ScenarioType)i;
           if (ImGui::Selectable(scenarioTypeToString(type).c_str(), m_selectedScenarioType == type)) {
-            m_selectedScenarioType = type;
+            setSelectedScenarioType(type);
           }
         }
         ImGui::EndCombo();
@@ -252,7 +251,7 @@ ESC       : nav cancel item
       }
 
 #ifdef ENABLE_NETCDF
-      if (m_selectedScenarioType == ScenarioType::Tsunami) {
+      if (m_selectedScenarioType == ScenarioType::NetCDF) {
         ImGui::Text("Requires bathymetry and displacement NetCDF files.");
         ImGui::Text("Enter paths or drag/drop files to the window.");
 
@@ -266,7 +265,7 @@ ESC       : nav cancel item
 #endif
 
       if (ImGui::Button("Load Scenario")) {
-        loadScenario();
+        selectScenario();
       }
 
       ImGui::End(); // Scenario Selection
@@ -305,55 +304,66 @@ ESC       : nav cancel item
     bgfx::destroy(m_program);
   }
 
+  bool SweApp::loadScenario() {
+    switch (m_scenarioType) {
+#ifndef __EMSCRIPTEN__
+    case ScenarioType::NetCDF: {
+      m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
+      m_util.z   = 1.0f;
+      break;
+    }
+#endif
+    case ScenarioType::Tohoku: {
+      m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Tohoku, m_boundaryType);
+      m_util.z   = 200.0f;
+      break;
+    }
+    case ScenarioType::ArtificialTsunami: {
+      m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
+      m_util.z   = 1000.0f;
+      break;
+    }
+#ifndef NDEBUG
+    case ScenarioType::Test: {
+      m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
+      m_util.z   = 1.0f;
+      break;
+    }
+#endif
+    case ScenarioType::None: {
+      m_message = "";
+      break;
+    }
+    default:
+      assert(false);
+      break;
+    }
+
+    if (m_scenario && !m_scenario->loadSuccess()) {
+      delete m_scenario;
+      m_scenarioType = ScenarioType::None;
+      m_scenario     = nullptr;
+      warn("Failed loading scenario");
+    }
+
+    if (m_scenarioType == ScenarioType::None) {
+      m_dimensions  = {};
+      m_gridData    = {};
+      m_boundaryPos = {};
+      m_util        = {};
+      return false;
+    }
+    return true;
+  }
+
   void SweApp::initializeBlock() {
     if (isBlockLoaded()) {
       destroyBlock();
     }
 
-    switch (m_scenarioType) {
-#ifndef NDEBUG
-    case ScenarioType::Test: {
-      m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
-
-      m_autoScaleDataRange = true;
-      m_util.z             = 1.0f; // Value scale
-      break;
-    }
-#endif
-    case ScenarioType::ArtificialTsunami: {
-      m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
-
-      m_autoScaleDataRange = true;
-      m_util.z             = 1000.0f;
-      break;
-    }
-#ifdef ENABLE_NETCDF
-    case ScenarioType::Tsunami: {
-      const auto* s = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
-
-      if (s->success()) {
-        m_scenario           = s;
-        m_autoScaleDataRange = false;
-        m_util.x             = -0.01f;
-        m_util.y             = 0.01f;
-        m_util.z             = 1.0f;
-        break;
-      }
-      warn("Failed loading scenario");
-      delete s;
-      m_scenarioType = ScenarioType::None;
-      [[fallthrough]];
-    }
-#endif
-    case ScenarioType::None: {
-      m_dimensions  = {};
-      m_gridData    = {};
-      m_boundaryPos = {};
-      m_util        = {};
+    bool loaded = loadScenario();
+    if (!loaded) {
       return;
-    }
-    default:
-      assert(false);
     }
 
     RealType left   = m_scenario->getBoundaryPos(BoundaryEdge::Left);
@@ -381,12 +391,12 @@ ESC       : nav cancel item
 
     createGrid({nx, ny});
 
-    // updateGrid();
-    // setUtilDataRange();
     resetCamera();
 
-    m_endSimulationTime = 0.0;
+    m_util.x            = -0.01f;
+    m_util.y            = 0.01f;
     m_message           = "";
+    m_endSimulationTime = 0.0;
   }
 
   void SweApp::createGrid(Vec2i n) {
@@ -413,7 +423,7 @@ ESC       : nav cancel item
       }
     }
     m_stateFlags |= BGFX_STATE_PT_TRISTRIP;
-    assert(index == 2 * (n.x + 1) * (n.y - 1) - 2); // DEBUG
+    assert(index == 2 * (n.x + 1) * (n.y - 1) - 2);
 #else // TriList
     m_indices = new uint32_t[6 * (n.x - 1) * (n.y - 1)];
     int index = 0;
@@ -433,7 +443,7 @@ ESC       : nav cancel item
       }
     }
     m_stateFlags &= ~BGFX_STATE_PT_TRISTRIP;
-    assert(index == 6 * (n.x - 1) * (n.y - 1)); // DEBUG
+    assert(index == 6 * (n.x - 1) * (n.y - 1));
 #endif
 
     m_vbh = bgfx::createVertexBuffer(bgfx::makeRef(m_vertices, n.x * n.y * sizeof(CellVertex)), CellVertex::layout);
@@ -443,7 +453,7 @@ ESC       : nav cancel item
     m_heightMapData = new float[n.x * n.y];
   }
 
-  void SweApp::loadScenario() {
+  void SweApp::selectScenario() {
     m_scenarioType          = m_selectedScenarioType;
     m_dimensions            = m_selectedDimensions;
     m_simulationTime        = 0.0;
@@ -453,10 +463,7 @@ ESC       : nav cancel item
     initializeBlock();
   }
 
-  void SweApp::startStopSimulation() {
-    m_playing = !m_playing;
-    m_message = "";
-  }
+  void SweApp::startStopSimulation() { m_playing = !m_playing; }
 
   void SweApp::resetSimulation() {
     if (!isBlockLoaded())
@@ -495,11 +502,27 @@ ESC       : nav cancel item
     m_camera.setTargetCenter(center);
   }
 
+  void SweApp::setSelectedScenarioType(ScenarioType scenarioType) {
+    m_selectedScenarioType = scenarioType;
+
+    switch (scenarioType) {
+    case ScenarioType::Tohoku:
+      m_selectedDimensions = {350, 200};
+      break;
+#ifndef NDEBUG
+    case ScenarioType::Test:
+      m_selectedDimensions = {20, 20};
+      break;
+#endif
+    default:
+      m_selectedDimensions = {100, 100};
+      break;
+    }
+  }
+
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
     setCameraTargetCenter();
-    // updateGrid();
-    // setUtilDataRange();
     m_message = "";
   }
 
@@ -651,7 +674,7 @@ ESC       : nav cancel item
       break;
     case Core::Key::Enter:
       if (m_showScenarioSelection && !ImGui::GetIO().NavVisible)
-        loadScenario();
+        selectScenario();
       break;
     case Core::Key::Space:
       ImGui::SetNavCursorVisible(false);
@@ -717,7 +740,7 @@ ESC       : nav cancel item
     if (m_showScenarioSelection) {
       for (int i = 0; i < (int)ScenarioType::Count && i <= 9; i++) {
         if (key == Core::Key::D0 + i) {
-          m_selectedScenarioType = (ScenarioType)i;
+          setSelectedScenarioType((ScenarioType)i);
         }
       }
     }
@@ -727,7 +750,7 @@ ESC       : nav cancel item
 
   void SweApp::onFileDropped([[maybe_unused]] std::string_view path) {
 #ifdef ENABLE_NETCDF
-    if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::Tsunami) {
+    if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::NetCDF) {
       std::filesystem::path filepath(path);
       if (filepath.extension() == ".nc") {
         std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows

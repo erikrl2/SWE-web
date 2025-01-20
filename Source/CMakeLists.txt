@@ -31,6 +31,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     -sMAX_WEBGL_VERSION=2
     -sUSE_GLFW=3
     --shell-file=${CMAKE_SOURCE_DIR}/Source/Shell.html
+    --preload-file ${CMAKE_BINARY_DIR}/Assets/Data@/Assets/Data
   )
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
+
+add_custom_command(
+  TARGET ${SWE_PROJECT_NAME}-App PRE_LINK
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+  ${CMAKE_SOURCE_DIR}/Assets/Data
+  $<TARGET_FILE_DIR:${SWE_PROJECT_NAME}-App>/Assets/Data
+)

@@ -27,6 +27,7 @@ namespace App {
     bool leftButtonPressed   = Core::Input::isButtonPressed(Core::Mouse::ButtonLeft);
     bool rightButtonPressed  = Core::Input::isButtonPressed(Core::Mouse::ButtonRight);
     bool middleButtonPressed = Core::Input::isButtonPressed(Core::Mouse::ButtonMiddle);
+    bool ctrlPressed         = Core::Input::isKeyPressed(Core::Key::LeftControl) || Core::Input::isKeyPressed(Core::Key::RightControl);
 
     bool buttonPressed = leftButtonPressed || rightButtonPressed || middleButtonPressed;
 
@@ -53,9 +54,9 @@ namespace App {
         break;
       }
       case Type::Perspective: {
-        if (leftButtonPressed) {
+        if (leftButtonPressed && !ctrlPressed) {
           rotate(mouseDelta);
-        } else if (middleButtonPressed) {
+        } else if (middleButtonPressed || (leftButtonPressed && ctrlPressed)) {
           pan(mouseDelta);
         } else if (rightButtonPressed) {
           zoom(mouseDelta.y);

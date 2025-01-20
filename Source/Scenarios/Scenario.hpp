@@ -51,6 +51,8 @@ namespace Scenarios {
 
     virtual BoundaryType getBoundaryType(BoundaryEdge edge) const;
     virtual RealType     getBoundaryPos(BoundaryEdge edge) const;
+
+    virtual bool loadSuccess() const;
   };
 
 } // namespace Scenarios
