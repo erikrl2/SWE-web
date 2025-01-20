@@ -28,7 +28,7 @@ def read_netcdf_info(filename):
         'boundary_y_max': boundary_y_max
     }
 
-def convert_netcdf_to_binary(input_file, output_file, target_nx=750, target_ny=300, 
+def convert_netcdf_to_binary(input_file, output_file, target_nx, target_ny, 
                            force_boundaries=None):
     """
     Converts NetCDF file to binary format, matching TsunamiScenario's sampling logic.
@@ -66,7 +66,7 @@ def convert_netcdf_to_binary(input_file, output_file, target_nx=750, target_ny=3
     print(f"  New: dx={new_dx}, dy={new_dy}")
     
     # Create new array
-    z_new = np.zeros((target_ny, target_nx))
+    z_new = np.zeros((target_ny, target_nx), dtype=np.float32)
     
     # Sample data using TsunamiScenario's exact method
     for j in range(target_ny):
@@ -91,7 +91,7 @@ def convert_netcdf_to_binary(input_file, output_file, target_nx=750, target_ny=3
         f.write(struct.pack('II', target_nx, target_ny))
         f.write(struct.pack('dd', origin_x, origin_y))
         f.write(struct.pack('dd', new_dx, new_dy))
-        z_new.astype(np.float64).tofile(f)
+        z_new.astype(np.float32).tofile(f)
     
     print(f"Successfully wrote {output_file}")
     return {
@@ -120,6 +120,6 @@ if __name__ == '__main__':
     convert_netcdf_to_binary(bath_file, "tohoku_bath.bin", 700, 400)
     
     # Then convert displacement using bathymetry boundaries
-    convert_netcdf_to_binary(displ_file, "tohoku_displ.bin", 700, 400, 
+    convert_netcdf_to_binary(displ_file, "tohoku_displ.bin", 250, 400, 
                             force_boundaries=bath_bounds)
     
