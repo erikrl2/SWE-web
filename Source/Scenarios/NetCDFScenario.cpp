@@ -51,6 +51,11 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
     return;
   }
 
+  if (displacementFile.empty()) {
+    noDisplacement_ = true;
+    return;
+  }
+
   // Displacement file
   try {
     // std::cout << "Reading displacement file " << displacementFile << std::endl;
@@ -125,7 +130,7 @@ RealType Scenarios::NetCDFScenario::getBathymetryBeforeDisplacement(RealType x, 
 }
 
 RealType Scenarios::NetCDFScenario::getDisplacement(RealType x, RealType y) const {
-  if (x < dBoundaryPos_[0] || x > dBoundaryPos_[1] || y < dBoundaryPos_[2] || y > dBoundaryPos_[3]) {
+  if (noDisplacement_ || x < dBoundaryPos_[0] || x > dBoundaryPos_[1] || y < dBoundaryPos_[2] || y > dBoundaryPos_[3]) {
     return RealType(0.0); // No displacement
   }
 

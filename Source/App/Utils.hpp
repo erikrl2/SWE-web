@@ -29,4 +29,6 @@ namespace App {
 
   bool fileExists(const std::string& path);
 
+  float getInitialZValueScale(ScenarioType type);
+
 } // namespace App

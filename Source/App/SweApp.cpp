@@ -130,7 +130,7 @@ namespace App {
       ImGui::SetKeyboardFocusHere();
       m_setFocusValueScale = false;
     }
-    if (ImGui::DragFloat("Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+    if (ImGui::DragFloat("Z-Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
       setCameraTargetCenter();
     }
 
@@ -144,11 +144,16 @@ namespace App {
 #endif
 
     if (ImGui::TreeNodeEx("Color Controls", ImGuiTreeNodeFlags_FramePadding | ImGuiTreeNodeFlags_SpanTextWidth)) {
-      ImGui::ColorEdit3("Color 1 (low)", m_color1, ImGuiColorEditFlags_NoAlpha);
-      ImGui::ColorEdit3("Color 2 (mid)", m_color2, ImGuiColorEditFlags_NoAlpha);
-      ImGui::ColorEdit3("Color 3 (high)", m_color3, ImGuiColorEditFlags_NoAlpha);
-      if (ImGui::ColorEdit3("Background", m_clearColor)) {
+      ImGui::ColorEdit4("Color 1 (low)", m_color1, ImGuiColorEditFlags_NoAlpha);
+      ImGui::ColorEdit4("Color 2 (mid)", m_color2, ImGuiColorEditFlags_NoAlpha);
+      ImGui::ColorEdit4("Color 3 (high)", m_color3, ImGuiColorEditFlags_NoAlpha);
+      if (ImGui::ColorEdit4("Background", m_clearColor, ImGuiColorEditFlags_NoAlpha)) {
         bgfx::setViewClear(m_mainView, m_clearFlags, colorToInt(m_clearColor));
+      }
+      if (ImGui::Button("Reset##ResetColors")) {
+        m_color1 = {0.0f, 0.0f, 0.0f, 1.0f};
+        m_color2 = {0.0f, 0.25f, 1.0f, 1.0f};
+        m_color3 = {1.0f, 1.0f, 1.0f, 1.0f};
       }
       ImGui::TreePop();
     }
@@ -313,29 +318,24 @@ ESC       : nav cancel item
 #ifdef ENABLE_NETCDF
     case ScenarioType::NetCDF: {
       m_scenario = new Scenarios::NetCDFScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
-      m_util.z   = 1.0f;
       break;
     }
 #endif
     case ScenarioType::Tohoku: {
       m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Tohoku, m_boundaryType);
-      m_util.z   = 200.0f;
       break;
     }
     case ScenarioType::Chile: {
       m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Chile, m_boundaryType);
-      m_util.z   = 200.0f;
       break;
     }
     case ScenarioType::ArtificialTsunami: {
       m_scenario = new Scenarios::ArtificialTsunamiScenario(m_boundaryType);
-      m_util.z   = 1000.0f;
       break;
     }
 #ifndef NDEBUG
     case ScenarioType::Test: {
       m_scenario = new Scenarios::TestScenario(m_boundaryType, m_dimensions.x);
-      m_util.z   = 1.0f;
       break;
     }
 #endif
@@ -367,7 +367,7 @@ ESC       : nav cancel item
     m_util         = {};
   }
 
-  bool SweApp::initializeBlock() {
+  bool SweApp::initializeBlock(bool silent) {
     if (isBlockLoaded()) {
       destroyBlock();
     }
@@ -402,12 +402,17 @@ ESC       : nav cancel item
 
     createGrid({nx, ny});
 
-    resetCamera();
+    m_util.x = -0.01f;
+    m_util.y = 0.01f;
 
-    m_util.x            = -0.01f;
-    m_util.y            = 0.01f;
-    m_message           = "";
+    if (!silent) {
+      m_util.z = getInitialZValueScale(m_scenarioType);
+      resetCamera();
+    }
+
     m_endSimulationTime = 0.0;
+
+    m_message = "";
 
     return true;
   }
@@ -467,13 +472,15 @@ ESC       : nav cancel item
   }
 
   bool SweApp::selectScenario() {
+    bool silent = m_scenarioType == m_selectedScenarioType && m_dimensions == m_selectedDimensions;
+
     m_scenarioType          = m_selectedScenarioType;
     m_dimensions            = m_selectedDimensions;
     m_simulationTime        = 0.0;
     m_playing               = false;
     m_showScenarioSelection = false;
 
-    return initializeBlock();
+    return initializeBlock(silent);
   }
 
   void SweApp::startStopSimulation() { m_playing = !m_playing; }
@@ -773,17 +780,19 @@ ESC       : nav cancel item
         }
       }
     } else {
-      if (count == 2) { // TODO: Count == 1 with bath only
+      if (count == 2) {
         if (addBathDisplFile(paths[0], -1) && addBathDisplFile(paths[1], 1)) {
-          auto typeBackup        = m_selectedScenarioType;
-          auto dimensionsBackup  = m_selectedDimensions;
-          m_selectedScenarioType = ScenarioType::NetCDF;
-          m_selectedDimensions   = {250, 250};
-          if (!selectScenario()) {
-            m_displacementFile[0]  = '\0';
-            m_bathymetryFile[0]    = '\0';
-            m_selectedScenarioType = typeBackup;
-            m_selectedDimensions   = dimensionsBackup;
+          tryAutoLoadNcFiles({250, 250});
+        }
+      } else if (count == 1) {
+        // single bathymetry file
+        if (addBathDisplFile(paths[0], -1)) {
+          m_displacementFile[0] = '\0';
+          tryAutoLoadNcFiles({250, 250});
+        } else if (isBlockLoaded() && m_scenarioType == ScenarioType::NetCDF) {
+          // single displacement file
+          if (addBathDisplFile(paths[0], 1)) {
+            tryAutoLoadNcFiles(m_dimensions);
           }
         }
       }
@@ -791,7 +800,23 @@ ESC       : nav cancel item
 #endif
   }
 
-  bool SweApp::addBathDisplFile(std::string_view path, int select) {
+  void SweApp::tryAutoLoadNcFiles([[maybe_unused]] Vec2i dimensions) {
+#ifdef ENABLE_NETCDF
+    auto typeBackup        = m_selectedScenarioType;
+    auto dimensionsBackup  = m_selectedDimensions;
+    m_selectedScenarioType = ScenarioType::NetCDF;
+    m_selectedDimensions   = dimensions;
+    if (!selectScenario()) {
+      m_bathymetryFile[0]    = '\0';
+      m_displacementFile[0]  = '\0';
+      m_selectedScenarioType = typeBackup;
+      m_selectedDimensions   = dimensionsBackup;
+    }
+#endif
+  }
+
+  bool SweApp::addBathDisplFile([[maybe_unused]] std::string_view path, [[maybe_unused]] int select) {
+#ifdef ENABLE_NETCDF
     std::filesystem::path filepath(path);
     if (filepath.extension() == ".nc") {
       std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
@@ -804,6 +829,7 @@ ESC       : nav cancel item
         return true;
       }
     }
+#endif
     return false;
   }
 

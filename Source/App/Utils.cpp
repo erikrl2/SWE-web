@@ -144,4 +144,28 @@ namespace App {
     return std::filesystem::exists(fsPath);
   }
 
+  float getInitialZValueScale(ScenarioType type) {
+    switch (type) {
+#ifdef ENABLE_NETCDF
+    case ScenarioType::NetCDF:
+      return 1.0f;
+#endif
+    case ScenarioType::Tohoku:
+      return 200.0f;
+    case ScenarioType::Chile:
+      return 200.0f;
+    case ScenarioType::ArtificialTsunami:
+      return 1000.0f;
+#ifndef NDEBUG
+    case ScenarioType::Test:
+      return 1.0f;
+#endif
+    case ScenarioType::None:
+      return 0.0f;
+    default:
+      assert(false);
+    }
+    return {};
+  }
+
 } // namespace App

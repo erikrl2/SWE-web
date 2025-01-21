@@ -36,6 +36,8 @@ namespace Scenarios {
     RealType          dOriginX_, dOriginY_;
     RealType          dDX_, dDY_;
 
+    bool noDisplacement_ = false;
+
     bool success_ = true;
   };
 
