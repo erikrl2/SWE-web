@@ -21,7 +21,6 @@ target_include_directories(${SWE_PROJECT_NAME} PUBLIC
 add_dependencies(${SWE_PROJECT_NAME} compile_shaders)
 
 add_executable(${SWE_PROJECT_NAME}-App Core/EntryPoint.cpp)
-target_link_libraries(${SWE_PROJECT_NAME}-App PRIVATE ${SWE_PROJECT_NAME})
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   target_link_options(${SWE_PROJECT_NAME}-App PRIVATE
@@ -30,11 +29,15 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     -sALLOW_MEMORY_GROWTH=1
     -sMAX_WEBGL_VERSION=2
     -sUSE_GLFW=3
+    -fwasm-exceptions
     --shell-file=${CMAKE_SOURCE_DIR}/Source/Shell.html
     --preload-file ${CMAKE_BINARY_DIR}/Assets/Data@/Assets/Data
   )
+  target_compile_options(${SWE_PROJECT_NAME} PRIVATE -fwasm-exceptions)
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
+
+target_link_libraries(${SWE_PROJECT_NAME}-App PRIVATE ${SWE_PROJECT_NAME})
 
 add_custom_command(
   TARGET ${SWE_PROJECT_NAME}-App PRE_LINK

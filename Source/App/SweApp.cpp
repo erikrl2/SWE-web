@@ -259,14 +259,12 @@ ESC       : nav cancel item
         ImGui::TextDisabled("(?)");
         ImGui::SetItemTooltip("File name must contain 'bath' or 'displ' to be recognized.");
 
+        int fileInputTextFlags = ImGuiInputTextFlags_ElideLeft;
 #ifdef __EMSCRIPTEN__
-        ImGui::BeginDisabled();
+        fileInputTextFlags |= ImGuiInputTextFlags_ReadOnly;
 #endif
-        ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile));
-        ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile));
-#ifdef __EMSCRIPTEN__
-        ImGui::EndDisabled();
-#endif
+        ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile), fileInputTextFlags);
+        ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile), fileInputTextFlags);
       }
 #endif
 
@@ -314,13 +312,8 @@ ESC       : nav cancel item
     switch (m_scenarioType) {
 #ifdef ENABLE_NETCDF
     case ScenarioType::NetCDF: {
-      if (fileExists(m_bathymetryFile) && fileExists(m_displacementFile)) {
-        m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
-        m_util.z   = 1.0f;
-      } else {
-        m_scenarioType = ScenarioType::None;
-        warn("Failed loading scenario");
-      }
+      m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
+      m_util.z   = 1.0f;
       break;
     }
 #endif
@@ -347,6 +340,7 @@ ESC       : nav cancel item
     }
 #endif
     case ScenarioType::None: {
+      setNoneScenario();
       m_message = "";
       break;
     }
@@ -357,19 +351,20 @@ ESC       : nav cancel item
 
     if (m_scenario && !m_scenario->loadSuccess()) {
       delete m_scenario;
-      m_scenarioType = ScenarioType::None;
-      m_scenario     = nullptr;
+      m_scenario = nullptr;
+      setNoneScenario();
       warn("Failed loading scenario");
     }
 
-    if (m_scenarioType == ScenarioType::None) {
-      m_dimensions  = {};
-      m_gridData    = {};
-      m_boundaryPos = {};
-      m_util        = {};
-      return false;
-    }
-    return true;
+    return m_scenarioType != ScenarioType::None;
+  }
+
+  void SweApp::setNoneScenario() {
+    m_scenarioType = ScenarioType::None;
+    m_dimensions   = {};
+    m_gridData     = {};
+    m_boundaryPos  = {};
+    m_util         = {};
   }
 
   bool SweApp::initializeBlock() {
@@ -771,19 +766,24 @@ ESC       : nav cancel item
 
   void SweApp::onFileDropped([[maybe_unused]] const char** paths, [[maybe_unused]] int count) {
 #ifdef ENABLE_NETCDF
-    if (m_showScenarioSelection && m_selectedScenarioType == ScenarioType::NetCDF) {
-      for (int i = 0; i < count; i++) {
-        addBathDisplFile(paths[i]);
+    if (m_showScenarioSelection) {
+      if (m_selectedScenarioType == ScenarioType::NetCDF) {
+        for (int i = 0; i < count; i++) {
+          addBathDisplFile(paths[i]);
+        }
       }
-    }
-    if (!m_showScenarioSelection && count == 2) {
-      if (addBathDisplFile(paths[0]) && addBathDisplFile(paths[1])) {
-        if (m_bathymetryFile[0] != '\0' && m_displacementFile[0] != '\0') {
+    } else {
+      if (count == 2) { // TODO: Count == 1 with bath only
+        if (addBathDisplFile(paths[0], -1) && addBathDisplFile(paths[1], 1)) {
+          auto typeBackup        = m_selectedScenarioType;
+          auto dimensionsBackup  = m_selectedDimensions;
           m_selectedScenarioType = ScenarioType::NetCDF;
           m_selectedDimensions   = {250, 250};
           if (!selectScenario()) {
-            m_displacementFile[0] = '\0';
-            m_bathymetryFile[0]   = '\0';
+            m_displacementFile[0]  = '\0';
+            m_bathymetryFile[0]    = '\0';
+            m_selectedScenarioType = typeBackup;
+            m_selectedDimensions   = dimensionsBackup;
           }
         }
       }
@@ -791,15 +791,15 @@ ESC       : nav cancel item
 #endif
   }
 
-  bool SweApp::addBathDisplFile(std::string_view path) {
+  bool SweApp::addBathDisplFile(std::string_view path, int select) {
     std::filesystem::path filepath(path);
     if (filepath.extension() == ".nc") {
       std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
       std::string filename   = filepath.filename().string();
-      if (filename.find("bath") != std::string::npos) {
+      if (select <= 0 && filename.find("bath") != std::string::npos) {
         strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile) - 1);
         return true;
-      } else if (filename.find("displ") != std::string::npos) {
+      } else if (select >= 0 && filename.find("displ") != std::string::npos) {
         strncpy(m_displacementFile, usablePath.c_str(), sizeof(m_displacementFile) - 1);
         return true;
       }

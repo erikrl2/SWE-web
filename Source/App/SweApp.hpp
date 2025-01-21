@@ -32,6 +32,7 @@ namespace App {
     void destroyBlock();
     void destroyProgram();
     bool loadScenario();
+    void setNoneScenario();
     bool initializeBlock();
     void createGrid(Vec2i n);
     bool selectScenario();
@@ -48,7 +49,7 @@ namespace App {
     void toggleVsync();
     void applyDisplacement();
     void warn(const char* message);
-    bool addBathDisplFile(std::string_view path);
+    bool addBathDisplFile(std::string_view path, int select = 0);
 
     void simulate(float dt);
     void updateGrid();
