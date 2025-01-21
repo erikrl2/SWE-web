@@ -1,10 +1,6 @@
-/**
- * @file TestScenario.hpp
- * @brief For testing purposes.
- */
-
 #pragma once
 
+#ifndef NDEBUG
 #include "Scenario.hpp"
 
 namespace Scenarios {
@@ -37,3 +33,4 @@ namespace Scenarios {
   };
 
 } // namespace Scenarios
+#endif

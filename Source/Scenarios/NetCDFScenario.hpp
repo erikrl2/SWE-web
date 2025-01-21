@@ -8,10 +8,10 @@
 
 namespace Scenarios {
 
-  class TsunamiScenario: public Scenario {
+  class NetCDFScenario: public Scenario {
   public:
-    TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType);
-    ~TsunamiScenario() override = default;
+    NetCDFScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType);
+    ~NetCDFScenario() override = default;
 
     RealType getBathymetryBeforeDisplacement(RealType x, RealType y) const override;
     RealType getDisplacement(RealType x, RealType y) const override;

@@ -1,11 +1,11 @@
 #ifdef ENABLE_NETCDF
-#include "TsunamiScenario.hpp"
+#include "NetCDFScenario.hpp"
 
 #include <cassert>
 #include <cmath>
 #include <netcdf>
 
-Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType):
+Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, const std::string& displacementFile, BoundaryType boundaryType):
   boundaryType_(boundaryType) {
   // Bathymetry file
   try {
@@ -102,7 +102,7 @@ Scenarios::TsunamiScenario::TsunamiScenario(const std::string& bathymetryFile, c
   }
 }
 
-RealType Scenarios::TsunamiScenario::getBathymetryBeforeDisplacement(RealType x, RealType y) const {
+RealType Scenarios::NetCDFScenario::getBathymetryBeforeDisplacement(RealType x, RealType y) const {
   if (x < boundaryPos_[0] || x > boundaryPos_[1] || y < boundaryPos_[2] || y > boundaryPos_[3]) {
     return RealType(0.0); // Will be later replaced by a boundary condition
   }
@@ -124,7 +124,7 @@ RealType Scenarios::TsunamiScenario::getBathymetryBeforeDisplacement(RealType x,
   return b;
 }
 
-RealType Scenarios::TsunamiScenario::getDisplacement(RealType x, RealType y) const {
+RealType Scenarios::NetCDFScenario::getDisplacement(RealType x, RealType y) const {
   if (x < dBoundaryPos_[0] || x > dBoundaryPos_[1] || y < dBoundaryPos_[2] || y > dBoundaryPos_[3]) {
     return RealType(0.0); // No displacement
   }

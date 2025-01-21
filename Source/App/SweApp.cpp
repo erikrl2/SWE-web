@@ -9,9 +9,9 @@
 
 #include "Blocks/DimensionalSplitting.hpp"
 #include "Scenarios/ArtificialTsunamiScenario.hpp"
+#include "Scenarios/NetCDFScenario.hpp"
 #include "Scenarios/RealisticScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
-#include "Scenarios/TsunamiScenario.hpp"
 #include "swe/fs_swe.bin.h"
 #include "swe/vs_swe.bin.h"
 #include "Utils.hpp"
@@ -312,7 +312,7 @@ ESC       : nav cancel item
     switch (m_scenarioType) {
 #ifdef ENABLE_NETCDF
     case ScenarioType::NetCDF: {
-      m_scenario = new Scenarios::TsunamiScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
+      m_scenario = new Scenarios::NetCDFScenario(m_bathymetryFile, m_displacementFile, m_boundaryType);
       m_util.z   = 1.0f;
       break;
     }
