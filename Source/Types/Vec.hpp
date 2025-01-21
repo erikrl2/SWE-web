@@ -13,6 +13,9 @@ struct Vec2i {
     y(y) {}
 
   operator int*() { return &x; }
+
+  bool operator==(const Vec2i& other) const { return x == other.x && y == other.y; }
+  bool operator!=(const Vec2i& other) const { return x != other.x || y != other.y; }
 };
 
 struct Vec2f {

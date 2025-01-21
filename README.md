@@ -17,6 +17,8 @@ Various rendering APIs are used depending on the platform (thanks to bgfx):
 ## Features
 
 - Selecting and playing scenarios with specified grid sizes
+  - 3 builtin Tsunami scenarios: Tohoku (2011), Chile (2014), Artifical Tsunami
+  - 1 custom scenario that takes NetCDF input files for bathymetry and displacement. Examples can be downloaded [here](https://tumde-my.sharepoint.com/:f:/g/personal/erik_lauterwald_tum_de/Eod1ZmKOPutLs8_TxyevuFMB6wDQbcHuwaQ64LJddqgR0A?e=gHidv3).
 - Different view types for water height, momentums, bathymetry and surface level (h, hu, hv, b, h+b)
 - Two boundary types *Outflow* and *Wall*
 - Reapply the initial displacement to create new waves at runtime
@@ -28,6 +30,8 @@ Various rendering APIs are used depending on the platform (thanks to bgfx):
 - Toggle seamlessly between orthographic and perspective camera
 - Choose between wireframe and solid rendering
 - Shortcuts for everything
+- Drag-And-Drop NetCDF files to import or auto-load depending on if selection window is open. Single bathymetry files can be loaded and displacement added afterwards
+
 
 ## How to Build
 
@@ -35,7 +39,7 @@ First create a Build directory and navigate into it.
 
 ### Generate Build Files
 
-#### Native Desktop-App using normal/non-vcpkg NetCDF Installation (only supported by Linux and Mac)
+#### Native Desktop-App using normal/non-vcpkg NetCDF Installation (only on Linux and Mac)
 ```sh
 cmake ..
 ```
@@ -83,7 +87,7 @@ Or open project files on Windows using Visual Studio.
 #### Web-App
 If `emsdk_env.sh` is sourced:
 ```sh
-emrun SWE-App
+emrun SWE-App.html
 ```
 Or else manually host a local server using `python3 -m http.server` or `npx http-server` and open SWE-App.html in the browser.
 

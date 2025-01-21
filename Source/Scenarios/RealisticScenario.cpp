@@ -24,7 +24,9 @@ Scenarios::RealisticScenario::RealisticScenario(RealisticScenarioType scenario, 
 
   // Bathymetry file
   try {
-    // std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+#ifndef NDEBUG
+    std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+#endif
     FileHeader header;
 
     if (!loadBinaryData(bathymetryFile, header, b_)) {
@@ -56,7 +58,9 @@ Scenarios::RealisticScenario::RealisticScenario(RealisticScenarioType scenario, 
 
   // Displacement file
   try {
-    // std::cout << "Reading displacement file " << displacementFile << std::endl;
+#ifndef NDEBUG
+    std::cout << "Reading displacement file " << displacementFile << std::endl;
+#endif
     FileHeader header;
 
     if (!loadBinaryData(displacementFile, header, d_)) {

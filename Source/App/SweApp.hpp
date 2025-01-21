@@ -32,7 +32,8 @@ namespace App {
     void destroyBlock();
     void destroyProgram();
     bool loadScenario();
-    bool initializeBlock();
+    void setNoneScenario();
+    bool initializeBlock(bool silent);
     void createGrid(Vec2i n);
     bool selectScenario();
     void startStopSimulation();
@@ -48,7 +49,8 @@ namespace App {
     void toggleVsync();
     void applyDisplacement();
     void warn(const char* message);
-    bool addBathDisplFile(std::string_view path);
+    void tryAutoLoadNcFiles(Vec2i dimensions);
+    bool addBathDisplFile(std::string_view path, int select = 0);
 
     void simulate(float dt);
     void updateGrid();
@@ -87,7 +89,7 @@ namespace App {
     Vec4f m_color3 = {1.0f, 1.0f, 1.0f, 1.0f};
 
     Vec2f m_cameraClipping = {0.1f, 1000.0f};
-    Vec4f m_clearColor     = {0.16f, 0.17f, 0.19f, 1.0f};
+    Vec4f m_clearColor     = {0.1f, 0.1f, 0.1f, 1.0f};
 
     Blocks::Block*             m_block    = nullptr;
     const Scenarios::Scenario* m_scenario = nullptr;
