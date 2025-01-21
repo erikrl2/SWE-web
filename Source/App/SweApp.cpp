@@ -203,37 +203,74 @@ namespace App {
 
     ImGui::End(); // Controls
 
-    ImGui::SetNextWindowSize(ImVec2(310, 200), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(310, 210), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSizeConstraints(ImVec2(310, 140), ImVec2(310, 640));
     ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 310, 0));
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
-    int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus
-                          | ImGuiWindowFlags_NoFocusOnAppearing;
-    ImGui::Begin("Key Bindings", nullptr, helpWindowFlags);
-    static const char* helpText =
-      R"(C         : hide control window
-S         : open scenario selection
-0-9       : select scenario
-Enter     : load selected scenario
-Space     : start/stop simulation
-R         : reset simulation
-F         : apply displacement
-E         : set nav focus on value scale
-H/U/V/B/A : select view type
-O/W       : select boundary type
-Q         : auto rescale data range
-T         : switch camera type
-X         : reset camera
-D         : auto scale data range
-L         : show lines
-I         : show stats
-P         : toggle vsync (desktop only)
-TAB       : nav focus next item
-Shift+TAB : nav focus prev item
-Ctrl+TAB  : nav focus next window
-Enter     : nav activate item
-ESC       : nav cancel item
-)";
-    ImGui::TextDisabled("%s", helpText);
+
+    int helpWindowFlags = ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoFocusOnAppearing;
+    if (ImGui::Begin("Help", nullptr, helpWindowFlags)) {
+
+      auto addRow = [](const char* key, const char* description) {
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::Text("%s", key);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::Text("%s", description);
+      };
+
+      if (ImGui::BeginTable("ButtonBindingsTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Button", ImGuiTableColumnFlags_WidthFixed, 65.0f);
+        ImGui::TableSetupColumn("Description");
+        ImGui::TableHeadersRow();
+        if (m_cameraIs3D) {
+          addRow("Left", "Rotate camera");
+          addRow("Ctrl+Left", "Pan camera");
+        } else {
+          addRow("Left", "Pan camera");
+        }
+        addRow("Middle", "Pan camera");
+        addRow("Right", "Zoom camera");
+        addRow("Scroll", "Zoom camera");
+        ImGui::EndTable();
+      }
+
+      ImGui::NewLine();
+
+      if (ImGui::BeginTable("KeyBindingsTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Key", ImGuiTableColumnFlags_WidthFixed, 65.0f);
+        ImGui::TableSetupColumn("Description");
+        ImGui::TableHeadersRow();
+        addRow("C", "Hide windows");
+        addRow("S", "Open scenario selection");
+        addRow("0-9", "(Select scenario)");
+        addRow("Enter", "Load selected scenario");
+        addRow("Space", "Start/stop simulation");
+        addRow("R", "Reset simulation");
+        addRow("F", "Apply displacement");
+        addRow("E", "Nav focus on z-value scale");
+        addRow("H", "Set view type: Height");
+        addRow("U", "Set view type: Momentum U");
+        addRow("V", "Set view type: Momentum V");
+        addRow("B", "Set view type: Bathymetry");
+        addRow("A", "Set view type: H + B");
+        addRow("O", "Set boundary type: Outflow");
+        addRow("W", "Set boundary type: Wall");
+        addRow("Q", "Auto rescale data range");
+        addRow("T", "Switch camera type");
+        addRow("X", "Reset camera");
+        addRow("D", "Auto scale data range");
+        addRow("L", "Show lines");
+        addRow("I", "Show stats");
+        addRow("P", "Toggle vsync (desktop only)");
+        addRow("TAB", "Nav focus next item");
+        addRow("Shift+TAB", "Nav focus prev item");
+        addRow("Ctrl+TAB", "Nav focus next window");
+        addRow("Enter", "Nav activate item");
+        addRow("ESC", "Nav cancel item");
+        ImGui::EndTable();
+      }
+    }
     ImGui::End();
     ImGui::PopStyleColor();
 
