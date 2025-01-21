@@ -9,7 +9,9 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
   boundaryType_(boundaryType) {
   // Bathymetry file
   try {
-    // std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+#ifndef NDEBUG
+    std::cout << "Reading bathymetry file " << bathymetryFile << std::endl;
+#endif
 
     netCDF::NcFile dataFile(bathymetryFile, netCDF::NcFile::read);
 
@@ -58,7 +60,9 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
 
   // Displacement file
   try {
-    // std::cout << "Reading displacement file " << displacementFile << std::endl;
+#ifndef NDEBUG
+    std::cout << "Reading displacement file " << displacementFile << std::endl;
+#endif
 
     netCDF::NcFile dataFile(displacementFile, netCDF::NcFile::read);
 

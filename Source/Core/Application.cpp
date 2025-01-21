@@ -117,25 +117,6 @@ namespace Core {
     glfwTerminate();
   }
 
-#ifdef __EMSCRIPTEN__
-  void Application::emscriptenMainLoop() {
-    glfwPollEvents();
-
-    if (glfwWindowShouldClose(s_app->m_window)) {
-      emscripten_cancel_main_loop();
-      return;
-    }
-
-    float dt = ImGui::GetIO().DeltaTime;
-
-    ImGuiBgfx::beginImGuiFrame();
-    s_app->updateImGui(dt);
-    ImGuiBgfx::endImGuiFrame();
-
-    s_app->update(dt);
-  }
-#endif
-
   void Application::run() {
 #ifdef __EMSCRIPTEN__
     emscripten_set_main_loop(emscriptenMainLoop, 0, true);
@@ -155,6 +136,62 @@ namespace Core {
   }
 
 #ifdef __EMSCRIPTEN__
+  void Application::emscriptenMainLoop() {
+    glfwPollEvents();
+
+    if (glfwWindowShouldClose(s_app->m_window)) {
+      emscripten_cancel_main_loop();
+      return;
+    }
+
+    float dt = ImGui::GetIO().DeltaTime;
+
+    ImGuiBgfx::beginImGuiFrame();
+    s_app->updateImGui(dt);
+    ImGuiBgfx::endImGuiFrame();
+
+    emscriptenUpdateCursor();
+
+    s_app->update(dt);
+  }
+
+  void Application::emscriptenUpdateCursor() {
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+      return;
+
+    const char* cursor;
+    switch (ImGui::GetMouseCursor()) {
+    case ImGuiMouseCursor_TextInput:
+      cursor = "text";
+      break;
+    case ImGuiMouseCursor_ResizeAll:
+      cursor = "move";
+      break;
+    case ImGuiMouseCursor_ResizeNS:
+      cursor = "ns-resize";
+      break;
+    case ImGuiMouseCursor_ResizeEW:
+      cursor = "ew-resize";
+      break;
+    case ImGuiMouseCursor_ResizeNESW:
+      cursor = "nesw-resize";
+      break;
+    case ImGuiMouseCursor_ResizeNWSE:
+      cursor = "nwse-resize";
+      break;
+    case ImGuiMouseCursor_Hand:
+      cursor = "pointer";
+      break;
+    default:
+      cursor = "default";
+      break;
+    }
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdollar-in-identifier-extension"
+    EM_ASM_ARGS({ document.body.style.cursor = UTF8ToString($0); }, cursor);
+#pragma clang diagnostic pop
+  }
+
   bool Application::emscriptenResizeCallback(int, const EmscriptenUiEvent* e, void*) {
     int width  = (int)e->windowInnerWidth;
     int height = (int)e->windowInnerHeight;

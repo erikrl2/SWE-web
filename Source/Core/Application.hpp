@@ -51,6 +51,7 @@ namespace Core {
   private:
 #ifdef __EMSCRIPTEN__
     static void emscriptenMainLoop();
+    static void emscriptenUpdateCursor();
     static bool emscriptenResizeCallback(int eventType, const EmscriptenUiEvent* e, void* userData);
 #endif
 

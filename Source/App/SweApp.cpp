@@ -428,10 +428,12 @@ namespace App {
 
     m_gridData = {(float)nx, (float)ny, (float)dx, (float)dy};
 
+#ifndef NDEBUG
     std::cout << "Loading block with scenario: " << scenarioTypeToString(m_scenarioType) << std::endl;
     std::cout << "  nx: " << nx << ", ny: " << ny << std::endl;
     std::cout << "  dx: " << dx << ", dy: " << dy << std::endl;
     std::cout << "  Left: " << left << ", Right: " << right << ", Bottom: " << bottom << ", Top: " << top << std::endl;
+#endif
 
     m_block = new Blocks::DimensionalSplittingBlock(nx, ny, dx, dy);
     m_block->initialiseScenario(left, bottom, *m_scenario);
