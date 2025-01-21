@@ -36,6 +36,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
 endif()
 
+if(CMAKE_GENERATOR MATCHES "Visual Studio")
+  set_target_properties(${SWE_PROJECT_NAME}-App
+    PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:${SWE_PROJECT_NAME}-App>")
+endif()
+
 add_custom_command(
   TARGET ${SWE_PROJECT_NAME}-App PRE_LINK
   COMMAND ${CMAKE_COMMAND} -E copy_directory
