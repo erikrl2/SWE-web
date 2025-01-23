@@ -25,7 +25,7 @@ Various rendering APIs are used depending on the platform (thanks to bgfx):
 - Time scaling to slow down the simulation
 - Specify an *end simulation time* at which the simulation stops
 - Set the data range used for a customizable 3-color gradient or use automatic scaling
-- Scale the z-value of the grid for better visualization
+- Scale the z-value of wet and dry cells for better visualization
 - Intuitive 3D camera mouse controls (left: rotate, middle: pan, right: zoom)
 - Toggle seamlessly between orthographic and perspective camera
 - Choose between wireframe and solid rendering

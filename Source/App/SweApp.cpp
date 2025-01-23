@@ -31,6 +31,7 @@ namespace App {
 
     u_gridData    = bgfx::createUniform("u_gridData", bgfx::UniformType::Vec4);
     u_boundaryPos = bgfx::createUniform("u_boundaryPos", bgfx::UniformType::Vec4);
+    u_dataRanges  = bgfx::createUniform("u_dataRanges", bgfx::UniformType::Vec4);
     u_util        = bgfx::createUniform("u_util", bgfx::UniformType::Vec4);
     u_color1      = bgfx::createUniform("u_color1", bgfx::UniformType::Vec4);
     u_color2      = bgfx::createUniform("u_color2", bgfx::UniformType::Vec4);
@@ -116,8 +117,8 @@ namespace App {
     ImGui::SeparatorText("Visualization");
 
     ImGui::BeginDisabled(m_autoScaleDataRange);
-    if (ImGui::DragFloat2("Data Range", m_util, 0.01f, 0.0f, 0.0f, "%.2f")) {
-      m_util.y = std::max(m_util.x, m_util.y);
+    if (ImGui::DragFloat2("Data Range", m_dataRanges, 0.01f, 0.0f, 0.0f, "%.2f")) {
+      m_dataRanges.y = std::max(m_dataRanges.x, m_dataRanges.y);
     }
 
     ImGui::SameLine();
@@ -130,7 +131,7 @@ namespace App {
       ImGui::SetKeyboardFocusHere();
       m_setFocusValueScale = false;
     }
-    if (ImGui::DragFloat("Z-Value Scale", &m_util.z, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+    if (ImGui::DragFloat2("Z-Scale (wet,dry)", m_util, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
       setCameraTargetCenter();
     }
 
@@ -190,6 +191,12 @@ namespace App {
     ImGui::SameLine();
     ImGui::Checkbox("Autoscale", &m_autoScaleDataRange);
 
+    ImGui::SameLine();
+    if (ImGui::Button("Hide")) {
+      m_showControls = false;
+    }
+    ImGui::SetItemTooltip("Unhide windows with 'C'");
+
 #ifndef __EMSCRIPTEN__
     ImGui::SeparatorText("Performance");
 
@@ -214,7 +221,8 @@ namespace App {
       auto addRow = [](const char* key, const char* description) {
         ImGui::TableNextRow();
         ImGui::TableSetColumnIndex(0);
-        ImGui::Text("%s", key);
+        int padding = (10 - strlen(key)) / 2;
+        ImGui::Text("%*s%s%*s", padding, "", key, padding, "");
         ImGui::TableSetColumnIndex(1);
         ImGui::Text("%s", description);
       };
@@ -341,6 +349,7 @@ namespace App {
   void SweApp::destroyProgram() {
     bgfx::destroy(u_gridData);
     bgfx::destroy(u_boundaryPos);
+    bgfx::destroy(u_dataRanges);
     bgfx::destroy(u_util);
     bgfx::destroy(u_color1);
     bgfx::destroy(u_color2);
@@ -401,6 +410,7 @@ namespace App {
     m_dimensions   = {};
     m_gridData     = {};
     m_boundaryPos  = {};
+    m_dataRanges   = {};
     m_util         = {};
   }
 
@@ -441,11 +451,12 @@ namespace App {
 
     createGrid({nx, ny});
 
-    m_util.x = -0.01f;
-    m_util.y = 0.01f;
+    m_dataRanges.x = -0.01f;
+    m_dataRanges.y = 0.01f;
 
     if (!silent) {
-      m_util.z = getInitialZValueScale(m_scenarioType);
+      m_util.x = getInitialZValueScale(m_scenarioType).x;
+      m_util.y = getInitialZValueScale(m_scenarioType).y;
       resetCamera();
     }
 
@@ -536,13 +547,13 @@ namespace App {
   }
 
   void SweApp::setUtilDataRange() {
-    if (std::abs(m_minMax.x - m_minMax.y) < 0.02f) {
-      float mid = (m_minMax.x + m_minMax.y) * 0.5f;
-      m_util.x  = mid - 0.01f;
-      m_util.y  = mid + 0.01f;
+    if (std::abs(m_minMaxWet.x - m_minMaxWet.y) < 0.02f) {
+      float mid      = (m_minMaxWet.x + m_minMaxWet.y) * 0.5f;
+      m_dataRanges.x = mid - 0.01f;
+      m_dataRanges.y = mid + 0.01f;
     } else {
-      m_util.x = m_minMax.x;
-      m_util.y = m_minMax.y;
+      m_dataRanges.x = m_minMaxWet.x;
+      m_dataRanges.y = m_minMaxWet.y;
     }
   }
 
@@ -557,7 +568,7 @@ namespace App {
     Vec3f center;
     center.x = (m_boundaryPos.x + m_boundaryPos.y) * 0.5f;
     center.y = (m_boundaryPos.z + m_boundaryPos.w) * 0.5f;
-    center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.z;
+    center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.x;
     m_camera.setTargetCenter(center);
   }
 
@@ -656,7 +667,8 @@ namespace App {
     int nx = m_dimensions.x;
     int ny = m_dimensions.y;
 
-    Vec2f minMax = {std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+    Vec2f minMaxWet = {std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
+    Vec2f minMaxDry = {std::numeric_limits<float>::max(), -std::numeric_limits<float>::max()};
 
     for (int j = 0; j < ny; j++) {
       for (int i = 0; i < nx; i++) {
@@ -664,15 +676,20 @@ namespace App {
         int   index = j * nx + i;
 
         if (!m_vertices[index].isDry) {
-          minMax.x = std::min(minMax.x, value);
-          minMax.y = std::max(minMax.y, value);
+          minMaxWet.x = std::min(minMaxWet.x, value);
+          minMaxWet.y = std::max(minMaxWet.y, value);
+        } else {
+          minMaxDry.x = std::min(minMaxDry.x, value);
+          minMaxDry.y = std::max(minMaxDry.y, value);
         }
 
         m_heightMapData[index] = value;
       }
     }
 
-    m_minMax = minMax;
+    m_minMaxWet    = minMaxWet;
+    m_dataRanges.z = minMaxDry.x;
+    m_dataRanges.w = minMaxDry.y;
 
     bgfx::updateTexture2D(m_heightMap, 0, 0, 0, 0, nx, ny, bgfx::makeRef(m_heightMapData, sizeof(float) * nx * ny));
   }
@@ -692,10 +709,12 @@ namespace App {
 
     // Calculate camera clipping planes so that the grid is always visible
     float maxDim       = std::max(m_boundaryPos.y - m_boundaryPos.x, m_boundaryPos.w - m_boundaryPos.z);
-    float centerZ      = m_camera.getTargetCenter().z / m_util.z;
+    float centerZ      = m_camera.getTargetCenter().z / m_util.x;
     Vec3f offset       = m_camera.getTargetOffset();
     float maxOffset    = std::max(std::max(std::abs(offset.x), std::abs(offset.y)), std::abs(offset.z));
-    float maxDist      = std::max(std::abs(m_minMax.x - centerZ), std::abs(m_minMax.y - centerZ)) * std::abs(m_util.z);
+    float maxScale     = std::max(std::abs(m_util.x), std::abs(m_util.y));
+    Vec2f minMaxValue  = {std::min(m_minMaxWet.x, m_dataRanges.z), std::max(m_minMaxWet.y, m_dataRanges.w)};
+    float maxDist      = std::max(std::abs(minMaxValue.x - centerZ), std::abs(minMaxValue.y - centerZ)) * maxScale;
     m_cameraClipping.x = maxDim * 0.005f;
     m_cameraClipping.y = m_camera.getZoom() * maxDim + std::max(maxDim, maxDist) + maxOffset * 2.0f;
 
@@ -712,6 +731,7 @@ namespace App {
 
       bgfx::setUniform(u_gridData, m_gridData);
       bgfx::setUniform(u_boundaryPos, m_boundaryPos);
+      bgfx::setUniform(u_dataRanges, m_dataRanges);
       bgfx::setUniform(u_util, m_util);
       bgfx::setUniform(u_color1, m_color1);
       bgfx::setUniform(u_color2, m_color2);

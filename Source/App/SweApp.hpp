@@ -66,6 +66,7 @@ namespace App {
 
     bgfx::UniformHandle u_gridData;
     bgfx::UniformHandle u_boundaryPos;
+    bgfx::UniformHandle u_dataRanges;
     bgfx::UniformHandle u_util;
 
     bgfx::UniformHandle u_color1;
@@ -81,8 +82,9 @@ namespace App {
 
     Vec4f m_gridData;    // x: nx, y: ny, z: dx, w: dy
     Vec4f m_boundaryPos; // x: left, y: right, z: bottom, w: top
-    Vec2f m_minMax;      // x: minVal, y: maxVal
-    Vec4f m_util;        // x: colorMinVal, y: colorMaxVal, z: valueScale
+    Vec2f m_minMaxWet;   // x: minVal, y: maxVal
+    Vec4f m_dataRanges;  // x: rangeWetMin, y: rangeWetMax, z: rangeDryMin, w: rangeDryMax
+    Vec4f m_util;        // x: zValueScaleWet, y: zValueScaleDry
 
     Vec4f m_color1 = {0.0f, 0.0f, 0.0f, 1.0f};
     Vec4f m_color2 = {0.0f, 0.25f, 1.0f, 1.0f};
