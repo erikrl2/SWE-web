@@ -38,7 +38,7 @@ namespace App {
     bool selectScenario();
     void startStopSimulation();
     void resetSimulation();
-    void setUtilDataRange();
+    void setWetDataRange();
     void resetCamera();
     void setCameraTargetCenter();
     void setSelectedScenarioType(ScenarioType scenarioType);

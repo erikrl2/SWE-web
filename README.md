@@ -1,97 +1,104 @@
 # SWE-Web
 
 SWE-Web is an interactive cross-platform 3D application for simulating artificial and realistic tsunamis.
-By supporting [NetCDF](https://en.wikipedia.org/wiki/NetCDF) data input, we can load the [bathymetry](https://en.wikipedia.org/wiki/Bathymetry) of real oceans and the displacement caused by earthquakes and simulate upon that.
+By supporting [NetCDF](https://en.wikipedia.org/wiki/NetCDF) data input, the application can load the [bathymetry](https://en.wikipedia.org/wiki/Bathymetry) of real oceans and the displacement caused by earthquakes.
 
-A version of the Web-App is live at [swe-web.de](https://swe-web.de/) running the binary files in the `Public` directory of `main`.
+A live version of the Web-App is available at [swe-web.de](https://swe-web.de/), running the binary files in the `Public` directory of `main`.
 
-Used libraries are [glfw](https://github.com/glfw/glfw), [bgfx](https://github.com/bkaradzic/bgfx), [imgui](https://github.com/ocornut/imgui) and [netcdf-cxx4](https://github.com/Unidata/netcdf-cxx4).
-The dependencies are fetched/built automatically when generating/compiling the project (except for netcdf).
+## Libraries Used
+- [glfw](https://github.com/glfw/glfw)
+- [bgfx](https://github.com/bkaradzic/bgfx)
+- [imgui](https://github.com/ocornut/imgui)
+- [netcdf-cxx4](https://github.com/Unidata/netcdf-cxx4)
 
-Various rendering APIs are used depending on the platform (thanks to bgfx):
-- *D3D11* on Windows
-- *Metal* on MacOS
-- *OpenGL* on Linux (as Vulkan caused some issues)
-- *OpenGLES* on Emscripten (WebGL)
+The dependencies are fetched and built automatically when generating/compiling the project (except for NetCDF).
+
+## Rendering APIs
+Various rendering APIs are used depending on the platform, thanks to bgfx:
+- **D3D11** on Windows
+- **Metal** on MacOS
+- **OpenGL** on Linux (Vulkan caused some issues)
+- **OpenGLES** on Emscripten (WebGL)
 
 ## Features
-
-- Selecting and playing scenarios with specified grid sizes
-  - 3 builtin Tsunami scenarios: Tohoku (2011), Chile (2014), Artifical Tsunami
-  - 1 custom scenario that takes NetCDF input files for bathymetry and displacement. Examples can be downloaded [here](https://tumde-my.sharepoint.com/:f:/g/personal/erik_lauterwald_tum_de/Eod1ZmKOPutLs8_TxyevuFMB6wDQbcHuwaQ64LJddqgR0A?e=gHidv3).
-- Different view types for water height, momentums, bathymetry and surface level (h, hu, hv, b, h+b)
-- Two boundary types *Outflow* and *Wall*
-- Reapply the initial displacement to create new waves at runtime
-- Time scaling to slow down the simulation
-- Specify an *end simulation time* at which the simulation stops
-- Set the data range used for a customizable 3-color gradient or use automatic scaling
-- Scale the z-value of wet and dry cells for better visualization
-- Intuitive 3D camera mouse controls (left: rotate, middle: pan, right: zoom)
-- Toggle seamlessly between orthographic and perspective camera
-- Choose between wireframe and solid rendering
-- Shortcuts for everything
-- Drag-And-Drop NetCDF files to import or auto-load depending on if selection window is open. Single bathymetry files can be loaded and displacement added afterwards
-
+- **Scenarios:**
+  - 3 built-in Tsunami scenarios: Tohoku (2011), Chile (2014), Artificial Tsunami
+  - 1 custom scenario that takes NetCDF input files for bathymetry and displacement. Examples can be downloaded [here](https://tumde-my.sharepoint.com/:f:/g/personal/erik_lauterwald_tum_de/Eod1ZmKOPutLs8_TxyevuFMB6wDQbcHuwaQ64LJddqgR0A?e=gHidv3)
+- **Views:**
+  - Different view types for water height, momentums, bathymetry, and surface level (h, hu, hv, b, h+b)
+- **Boundaries:**
+  - Two boundary types: Outflow and Wall
+- **Simulation Controls:**
+  - Reapply the initial displacement to create new waves at runtime
+  - Time scaling to slow down the simulation
+  - Specify an end simulation time at which the simulation stops
+- **Visualization:**
+  - Set the data range for a customizable 3-color gradient or use automatic scaling
+  - Scale the z-value of wet and dry cells for better visualization
+  - Intuitive 3D camera mouse controls
+  - Toggle seamlessly between orthographic and perspective camera
+  - Choose between wireframe and solid rendering
+  - Drag-and-drop NetCDF files to import or auto-load depending on if the selection window is open
 
 ## How to Build
 
-First create a Build directory and navigate into it.
+First, create a `Build` directory and navigate into it.
 
 ### Generate Build Files
 
-#### Native Desktop-App using normal/non-vcpkg NetCDF Installation (only on Linux and Mac)
-```sh
+#### Native Desktop-App (Linux and Mac)
+```
 cmake ..
 ```
-`netcdf-cxx4` (on Linux `netcdf_c++4`) must be installed by package manager.
+Note: `netcdf-cxx4` (on Linux `netcdf_c++4`) must be installed by a package manager.
 
-#### Native Desktop-App using [vcpkg](https://github.com/microsoft/vcpkg) NetCDF Installation (e.g. Windows with Triplet x64-windows-static)
-```sh
+##### Or using NetCDF from [vcpkg](https://github.com/microsoft/vcpkg) (Windows)
+```
 vcpkg install netcdf-cxx4:x64-windows-static
 cmake .. -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%/scripts/buildsystems/vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 ```
-Other triplets are: `x64-linux`, `x64-osx`, `arm64-osx`, `x64-mingw-dynamic`, etc.
+This works for all platforms. Other triplets: `x64-linux`, `x64-osx`, `arm64-osx`, `x64-mingw-dynamic`, etc.
 
-#### Web-App without NetCDF
-```sh
-cmake .. -DCMAKE_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake
+#### Web-App
+Without NetCDF, excluding the NetCDF-Scenario:
+```
+cmake .. -DCMAKE_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DENABLE_NETCDF=OFF
 ```
 Or, when `emsdk_env.sh` is sourced:
 ```
-emcmake cmake ..
+emcmake cmake .. -DENABLE_NETCDF=OFF
 ```
 
-#### Web-App with NetCDF
-First apply these [patches](https://gist.github.com/erikrl2/1d3b0ef856538fd09d6fd5c80f74c269) to the hdf5 and netcdf-c vcpkg ports.
-```sh
+##### With NetCDF (requires manual patching because Emscripten is not supported officially)
+Apply these [patches](https://gist.github.com/erikrl2/1d3b0ef856538fd09d6fd5c80f74c269) to the vcpkg ports of hdf5 and netcdf-c and then do:
+```
 vcpkg install netcdf-cxx4:wasm32-emscripten
 cmake .. -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE=/path/to/emsdk/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake -DVCPKG_TARGET_TRIPLET=wasm32-emscripten
 ```
 
 #### Notes
-- You can disable netcdf linkage with `-DENABLE_NETCDF=OFF`
+You can always disable NetCDF linkage with `-DENABLE_NETCDF=OFF`
 
 ### Compile
-```sh
-make SWE-App
+```
+cmake --build . --target SWE-App
 ```
 Or open project files on Windows using Visual Studio.
 
 ### Start
 
 #### Desktop-App
-```sh
+```
 ./SWE-App
 ```
 
 #### Web-App
 If `emsdk_env.sh` is sourced:
-```sh
+```
 emrun SWE-App.html
 ```
-Or else manually host a local server using `python3 -m http.server` or `npx http-server` and open SWE-App.html in the browser.
+Or manually host a local server using `python3 -m http.server` or `npx http-server` to run `SWE-App.html` in the browser.
 
-## Notes
-
-- The emsdk version used for cross compiling needs to be v3.1.74 or later
-- When switching target platform in the same build directory, you might need to clean the compiled bgfx shaders by calling `make -f Scripts/shader.mk clean`
+## Additional Notes
+- Emscripten cross-compiling is testet with emsdk version 3.1.74. Earlier versions might not work.
+- When switching target platforms, you might need to clean the compiled bgfx shaders by calling `make -f Scripts/shader.mk clean`.

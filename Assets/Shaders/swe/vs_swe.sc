@@ -13,29 +13,29 @@ uniform vec4 u_color3;
 
 SAMPLER2D(s_heightMap, 0);
 
-#define isDry (a_position == 1.0)
+#define id uint(gl_VertexID)
+#define nx uint(u_gridData.x)
+
+#define gridSize   u_gridData.xy
+#define cellSize   u_gridData.zw
+#define gridOrigin u_boundaryPos.xz
+
 #define dataRangeWet u_dataRanges.xy
 #define dataRangeDry u_dataRanges.zw
-#define gridOrigin u_boundaryPos.xz
-#define gridSize u_gridData.xy
-#define cellSize u_gridData.zw
-#define zValueScale u_util.xy
-#define nx uint(gridSize.x)
-#define id uint(gl_VertexID)
+#define wetScale     u_util.x
+#define dryScale     u_util.y
+
+#define isDry (a_position == 1.0)
+
+#define darkGreen vec4(0.15, 0.46, 0.42, 1.0)
+#define lightGrey vec4(0.62, 0.63, 0.63, 1.0)
+#define darkRed   vec4(0.67, 0.19, 0.07, 1.0)
 
 uint mod(uint a, uint b) {
   return a - b * (a / b);
 }
 
-vec4 getColor(float z, float scale, vec2 range, vec4 c1, vec4 c2, vec4 c3) {
-  if (scale == 0.0) {
-    return vec4(0.0);
-  }
-  if (range.x == range.y) {
-    range.x -= 0.1;
-    range.y += 0.1;
-  }
-  range *= scale;
+vec4 getColor(float z, vec2 range, vec4 c1, vec4 c2, vec4 c3) {
   float t = clamp((z - range.x) / (range.y - range.x), 0.0, 1.0) * 2.0;
   if (t < 1.0) {
     return mix(c1, c2, t);
@@ -50,14 +50,11 @@ void main() {
   float z = texture2DLod(s_heightMap, gridPos / gridSize, 0.0).r;
 
   if (!isDry) {
-    z *= zValueScale.x;
-    v_color0 = getColor(z, zValueScale.x, dataRangeWet, u_color1, u_color2, u_color3);
-  } else { // isDry
-    z *= zValueScale.y;
-    vec4 colorLow  = vec4(0.15, 0.46, 0.42, 1.0); // dark green
-    vec4 colorMid  = vec4(0.62, 0.63, 0.63, 1.0); // light grey
-    vec4 colorHigh = vec4(0.67, 0.19, 0.07, 1.0); // dark red
-    v_color0 = getColor(z, zValueScale.y, dataRangeDry, colorLow, colorMid, colorHigh);
+    v_color0 = getColor(z, dataRangeWet, u_color1, u_color2, u_color3);
+    z *= wetScale;
+  } else {
+    v_color0 = getColor(z, dataRangeDry, darkGreen, lightGrey, darkRed);
+    z *= dryScale;
   }
 
   gl_Position = mul(u_modelViewProj, vec4(gridOrigin + gridPos * cellSize, z, 1.0));

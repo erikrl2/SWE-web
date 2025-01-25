@@ -118,12 +118,15 @@ namespace App {
 
     ImGui::BeginDisabled(m_autoScaleDataRange);
     if (ImGui::DragFloat2("Data Range", m_dataRanges, 0.01f, 0.0f, 0.0f, "%.2f")) {
-      m_dataRanges.y = std::max(m_dataRanges.x, m_dataRanges.y);
+      float adjustedX = std::min(m_dataRanges.y - 0.01f, m_dataRanges.x);
+      float adjustedY = std::max(m_dataRanges.x + 0.01f, m_dataRanges.y);
+      m_dataRanges.x  = adjustedX;
+      m_dataRanges.y  = adjustedY;
     }
 
     ImGui::SameLine();
     if (ImGui::Button("Rescale")) {
-      setUtilDataRange();
+      setWetDataRange();
     }
     ImGui::EndDisabled();
 
@@ -546,7 +549,7 @@ namespace App {
     setBlockBoundaryType(m_block, m_boundaryType);
   }
 
-  void SweApp::setUtilDataRange() {
+  void SweApp::setWetDataRange() {
     if (std::abs(m_minMaxWet.x - m_minMaxWet.y) < 0.02f) {
       float mid      = (m_minMaxWet.x + m_minMaxWet.y) * 0.5f;
       m_dataRanges.x = mid - 0.01f;
@@ -581,6 +584,9 @@ namespace App {
       break;
     case ScenarioType::Chile:
       m_selectedDimensions = {400, 300};
+      break;
+    case ScenarioType::ArtificialTsunami:
+      m_selectedDimensions = {100, 100};
       break;
 #ifndef NDEBUG
     case ScenarioType::Test:
@@ -696,7 +702,10 @@ namespace App {
 
   void SweApp::updateControls(float) {
     if (m_autoScaleDataRange) {
-      setUtilDataRange();
+      setWetDataRange();
+    }
+    if (m_dataRanges.z == m_dataRanges.w) {
+      m_dataRanges.w += 0.01f;
     }
   }
 
@@ -787,7 +796,7 @@ namespace App {
       switchBoundary(BoundaryType::Wall);
       break;
     case Core::Key::Q:
-      setUtilDataRange();
+      setWetDataRange();
       break;
     case Core::Key::T:
       m_cameraIs3D = !m_cameraIs3D;
