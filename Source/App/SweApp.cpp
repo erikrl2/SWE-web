@@ -374,6 +374,10 @@ namespace App {
       m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Tohoku, m_boundaryType);
       break;
     }
+    case ScenarioType::TohokuZoomed: {
+      m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::TohokuZoomed, m_boundaryType);
+      break;
+    }
     case ScenarioType::Chile: {
       m_scenario = new Scenarios::RealisticScenario(Scenarios::RealisticScenarioType::Chile, m_boundaryType);
       break;
@@ -581,6 +585,9 @@ namespace App {
     switch (scenarioType) {
     case ScenarioType::Tohoku:
       m_selectedDimensions = {350, 200};
+      break;
+    case ScenarioType::TohokuZoomed:
+      m_selectedDimensions = {265, 200};
       break;
     case ScenarioType::Chile:
       m_selectedDimensions = {400, 300};
