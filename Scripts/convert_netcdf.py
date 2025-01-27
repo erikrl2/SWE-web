@@ -136,13 +136,13 @@ def get_scenario_configs() -> list[ScenarioConfig]:
             )
         ),
         ScenarioConfig(
-            name='Tohoku Zoomed (700x400)',
+            name='Tohoku Zoomed (530x400)',
             bath_config=GridConfig(
                 nx=700, ny=400,
                 origin_x=-500_000, origin_y=-450_000,  # in meters
-                domain_width=1_400_000, domain_height=800_000,  # in meters
+                domain_width=1_060_000, domain_height=800_000,  # in meters
                 input_file="tohoku_gebco_ucsb3_2000m_hawaii_bath.nc",
-                output_file="tohoku_zoomed_bath.bin"
+                output_file="tohoku_bath_zoomed.bin"
             ),
             displ_config=GridConfig(
                 nx=0, ny=0,
