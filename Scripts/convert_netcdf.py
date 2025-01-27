@@ -162,7 +162,7 @@ def get_scenario_configs() -> list[ScenarioConfig]:
                 output_file="chile_downscale_bath.bin"
             ),
             displ_config=GridConfig(
-                nx=555, ny=555,
+                nx=0, ny=0,
                 origin_x=float('inf'), origin_y=float('inf'),
                 domain_width=0, domain_height=0,
                 input_file="chile_gebco_usgs_2000m_displ.nc",
