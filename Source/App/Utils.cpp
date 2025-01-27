@@ -14,6 +14,8 @@ namespace App {
 #endif
     case ScenarioType::Tohoku:
       return "Tohoku";
+    case ScenarioType::TohokuZoomed:
+      return "Tohoku (Zoomed)";
     case ScenarioType::Chile:
       return "Chile";
     case ScenarioType::ArtificialTsunami:
@@ -152,6 +154,8 @@ namespace App {
 #endif
     case ScenarioType::Tohoku:
       return {100.0f, 100.0f};
+    case ScenarioType::TohokuZoomed:
+      return {20.0f, 20.0f};
     case ScenarioType::Chile:
       return {100.0f, 100.0f};
     case ScenarioType::ArtificialTsunami:

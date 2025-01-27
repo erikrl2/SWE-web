@@ -10,6 +10,7 @@ namespace Scenarios {
 
   enum class RealisticScenarioType {
     Tohoku,
+    TohokuZoomed,
     Chile,
   };
 

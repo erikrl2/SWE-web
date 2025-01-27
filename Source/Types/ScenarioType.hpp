@@ -6,6 +6,7 @@ enum class ScenarioType {
   NetCDF,
 #endif
   Tohoku,
+  TohokuZoomed,
   Chile,
   ArtificialTsunami,
 #ifndef NDEBUG

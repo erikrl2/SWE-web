@@ -14,6 +14,10 @@ Scenarios::RealisticScenario::RealisticScenario(RealisticScenarioType scenario, 
     bathymetryFile   = "Assets/Data/tohoku_bath.bin";
     displacementFile = "Assets/Data/tohoku_displ.bin";
     break;
+  case RealisticScenarioType::TohokuZoomed:
+    bathymetryFile   = "Assets/Data/tohoku_bath_zoomed.bin";
+    displacementFile = "Assets/Data/tohoku_displ.bin";
+    break;
   case RealisticScenarioType::Chile:
     bathymetryFile   = "Assets/Data/chile_bath.bin";
     displacementFile = "Assets/Data/chile_displ.bin";
