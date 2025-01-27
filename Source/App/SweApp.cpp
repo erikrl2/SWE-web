@@ -587,7 +587,7 @@ namespace App {
       m_selectedDimensions = {350, 200};
       break;
     case ScenarioType::TohokuZoomed:
-      m_selectedDimensions = {700, 400};
+      m_selectedDimensions = {265, 200};
       break;
     case ScenarioType::Chile:
       m_selectedDimensions = {400, 300};
