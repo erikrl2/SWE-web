@@ -1,10 +1,44 @@
 import netCDF4 as nc
 import numpy as np
 import struct
-import sys
+from dataclasses import dataclass
+from typing import Optional, Dict
+import inquirer
 
-def read_netcdf_info(filename):
-    """Read basic information from NetCDF file"""
+@dataclass
+class GridConfig:
+    nx: int
+    ny: int
+    origin_x: float  # in meters
+    origin_y: float  # in meters
+    domain_width: float  # in meters
+    domain_height: float  # in meters
+    input_file: str
+    output_file: str
+
+@dataclass
+class ScenarioConfig:
+    name: str
+    bath_config: GridConfig
+    displ_config: GridConfig
+
+@dataclass
+class DatasetInfo:
+    x: np.ndarray  # in meters
+    y: np.ndarray  # in meters
+    z: np.ndarray
+    dx: float  # in meters
+    dy: float  # in meters
+    origin_x: float  # in meters
+    origin_y: float  # in meters
+    boundary_x_max: float  # in meters
+    boundary_y_max: float  # in meters
+    width: float  # in meters
+    height: float  # in meters
+    nx: int
+    ny: int
+
+def read_netcdf_info(filename: str) -> DatasetInfo:
     ds = nc.Dataset(filename)
     x = ds.variables['x'][:]
     y = ds.variables['y'][:]
@@ -16,110 +50,141 @@ def read_netcdf_info(filename):
     boundary_x_max = origin_x + dx * len(x)
     boundary_y_max = origin_y + dy * len(y)
     
-    return {
-        'x': x,
-        'y': y,
-        'z': z,
-        'dx': dx,
-        'dy': dy,
-        'origin_x': origin_x,
-        'origin_y': origin_y,
-        'boundary_x_max': boundary_x_max,
-        'boundary_y_max': boundary_y_max
-    }
+    return DatasetInfo(
+        x=x, y=y, z=z, dx=dx, dy=dy,
+        origin_x=origin_x, origin_y=origin_y,
+        boundary_x_max=boundary_x_max,
+        boundary_y_max=boundary_y_max,
+        width=boundary_x_max - origin_x,
+        height=boundary_y_max - origin_y,
+        nx=len(x), ny=len(y)
+    )
 
-def convert_netcdf_to_binary(input_file, output_file, target_nx, target_ny, 
-                           force_boundaries=None):
-    """
-    Converts NetCDF file to binary format, matching TsunamiScenario's sampling logic.
-    force_boundaries: Optional dictionary with x_min, x_max, y_min, y_max to force specific boundaries
-    """
-    print(f"\nProcessing {input_file} -> {output_file}")
-    print(f"Target dimensions: {target_nx} x {target_ny}")
+def get_effective_config(grid_config: GridConfig, info: DatasetInfo) -> GridConfig:
+    return GridConfig(
+        nx=info.nx if grid_config.nx == 0 else grid_config.nx,
+        ny=info.ny if grid_config.ny == 0 else grid_config.ny,
+        origin_x=info.origin_x if grid_config.origin_x == float('inf') else grid_config.origin_x,
+        origin_y=info.origin_y if grid_config.origin_y == float('inf') else grid_config.origin_y,
+        domain_width=info.width if grid_config.domain_width == 0 else grid_config.domain_width,
+        domain_height=info.height if grid_config.domain_height == 0 else grid_config.domain_height,
+        input_file=grid_config.input_file,
+        output_file=grid_config.output_file
+    )
+
+def convert_netcdf_to_binary(grid_config: GridConfig) -> Dict[str, float]:
+    print(f"\nProcessing {grid_config.input_file} -> {grid_config.output_file}")
+    info = read_netcdf_info(grid_config.input_file)
     
-    # Read data
-    info = read_netcdf_info(input_file)
+    config = get_effective_config(grid_config, info)
     
-    # Use forced boundaries if provided, otherwise use data boundaries
-    if force_boundaries:
-        origin_x = force_boundaries['x_min']
-        origin_y = force_boundaries['y_min']
-        boundary_x_max = force_boundaries['x_max']
-        boundary_y_max = force_boundaries['y_max']
-        print("Using forced boundaries:")
-    else:
-        origin_x = info['origin_x']
-        origin_y = info['origin_y']
-        boundary_x_max = info['boundary_x_max']
-        boundary_y_max = info['boundary_y_max']
-        print("Using natural boundaries:")
+    x_max = config.origin_x + config.domain_width
+    y_max = config.origin_y + config.domain_height
+    cell_size_x = config.domain_width / config.nx
+    cell_size_y = config.domain_height / config.ny
     
-    print(f"  X: [{origin_x}, {boundary_x_max}]")
-    print(f"  Y: [{origin_y}, {boundary_y_max}]")
+    print(f"Grid configuration:")
+    print(f"  Origin: ({config.origin_x/1000:.1f}, {config.origin_y/1000:.1f}) km")
+    print(f"  Domain size: {config.domain_width/1000:.1f} x {config.domain_height/1000:.1f} km")
+    print(f"  Cell size: ({cell_size_x/1000:.2f}, {cell_size_y/1000:.2f}) km")
+    print(f"  Dimensions: {config.nx} x {config.ny} cells")
     
-    # Calculate new cell sizes
-    new_dx = (boundary_x_max - origin_x) / target_nx
-    new_dy = (boundary_y_max - origin_y) / target_ny
+    z_new = np.zeros((config.ny, config.nx), dtype=np.float32)
     
-    print(f"Grid spacing:")
-    print(f"  Original: dx={info['dx']}, dy={info['dy']}")
-    print(f"  New: dx={new_dx}, dy={new_dy}")
-    
-    # Create new array
-    z_new = np.zeros((target_ny, target_nx), dtype=np.float32)
-    
-    # Sample data using TsunamiScenario's exact method
-    for j in range(target_ny):
-        for i in range(target_nx):
-            # Calculate physical coordinates
-            x = origin_x + i * new_dx
-            y = origin_y + j * new_dy
+    for j in range(config.ny):
+        for i in range(config.nx):
+            x = config.origin_x + i * cell_size_x
+            y = config.origin_y + j * cell_size_y
             
-            # Calculate indices in original grid
-            orig_i = int(round((x - info['origin_x']) / info['dx'] - 0.5))
-            orig_j = int(round((y - info['origin_y']) / info['dy'] - 0.5))
+            orig_i = int(round((x - info.origin_x) / info.dx - 0.5))
+            orig_j = int(round((y - info.origin_y) / info.dy - 0.5))
             
-            # Bounds check
-            if (orig_i >= 0 and orig_i < len(info['x']) and 
-                orig_j >= 0 and orig_j < len(info['y'])):
-                z_new[j, i] = info['z'][orig_j, orig_i]
+            if (orig_i >= 0 and orig_i < len(info.x) and 
+                orig_j >= 0 and orig_j < len(info.y)):
+                z_new[j, i] = info.z[orig_j, orig_i]
     
-    print(f"Data range: [{z_new.min():.2f}, {z_new.max():.2f}]")
-    
-    # Write binary file
-    with open(output_file, 'wb') as f:
-        f.write(struct.pack('II', target_nx, target_ny))
-        f.write(struct.pack('dd', origin_x, origin_y))
-        f.write(struct.pack('dd', new_dx, new_dy))
+    with open(config.output_file, 'wb') as f:
+        f.write(struct.pack('II', config.nx, config.ny))
+        f.write(struct.pack('dd', config.origin_x, config.origin_y))
+        f.write(struct.pack('dd', cell_size_x, cell_size_y))
         z_new.astype(np.float32).tofile(f)
     
-    print(f"Successfully wrote {output_file}")
     return {
-        'x_min': origin_x,
-        'x_max': boundary_x_max,
-        'y_min': origin_y,
-        'y_max': boundary_y_max
+        'x_min': config.origin_x,
+        'x_max': x_max,
+        'y_min': config.origin_y,
+        'y_max': y_max
     }
 
+def get_scenario_configs() -> list[ScenarioConfig]:
+    return [
+        ScenarioConfig(
+            name='Tohoku Downscale (700x400)',
+            bath_config=GridConfig(
+                nx=700, ny=400,
+                origin_x=float('inf'), origin_y=float('inf'),
+                domain_width=0, domain_height=0,
+                input_file="tohoku_gebco_ucsb3_2000m_hawaii_bath.nc",
+                output_file="tohoku_downscale_bath.bin"
+            ),
+            displ_config=GridConfig(
+                nx=0, ny=0,
+                origin_x=float('inf'), origin_y=float('inf'),
+                domain_width=0, domain_height=0,
+                input_file="tohoku_gebco_ucsb3_2000m_hawaii_displ.nc",
+                output_file="tohoku_full_displ.bin"
+            )
+        ),
+        ScenarioConfig(
+            name='Tohoku Zoomed (700x400)',
+            bath_config=GridConfig(
+                nx=700, ny=400,
+                origin_x=-500_000, origin_y=-450_000,  # in meters
+                domain_width=1_400_000, domain_height=800_000,  # in meters
+                input_file="tohoku_gebco_ucsb3_2000m_hawaii_bath.nc",
+                output_file="tohoku_zoomed_bath.bin"
+            ),
+            displ_config=GridConfig(
+                nx=0, ny=0,
+                origin_x=float('inf'), origin_y=float('inf'),
+                domain_width=0, domain_height=0,
+                input_file="tohoku_gebco_ucsb3_2000m_hawaii_displ.nc",
+                output_file="tohoku_full_displ.bin"
+            )
+        ),
+        ScenarioConfig(
+            name='Chile Downscale (800x600)',
+            bath_config=GridConfig(
+                nx=800, ny=600,
+                origin_x=float('inf'), origin_y=float('inf'),
+                domain_width=0, domain_height=0,
+                input_file="chile_gebco_usgs_2000m_bath.nc",
+                output_file="chile_downscale_bath.bin"
+            ),
+            displ_config=GridConfig(
+                nx=555, ny=555,
+                origin_x=float('inf'), origin_y=float('inf'),
+                domain_width=0, domain_height=0,
+                input_file="chile_gebco_usgs_2000m_displ.nc",
+                output_file="chile_displ.bin"
+            )
+        )
+    ]
+
+def main():
+    scenarios = get_scenario_configs()
+    
+    questions = [
+        inquirer.List('scenario',
+                     message="Select scenario",
+                     choices=[s.name for s in scenarios])
+    ]
+    
+    answers = inquirer.prompt(questions)
+    selected = next(s for s in scenarios if s.name == answers['scenario'])
+    
+    convert_netcdf_to_binary(selected.bath_config)
+    convert_netcdf_to_binary(selected.displ_config)
+
 if __name__ == '__main__':
-    
-    # First read bathymetry boundaries
-    bath_file = "tohoku_gebco_ucsb3_2000m_hawaii_bath.nc"
-    displ_file = "tohoku_gebco_ucsb3_2000m_hawaii_displ.nc"
-    
-    print("Reading bathymetry boundaries...")
-    bath_info = read_netcdf_info(bath_file)
-    bath_bounds = {
-        'x_min': bath_info['origin_x'],
-        'x_max': bath_info['boundary_x_max'],
-        'y_min': bath_info['origin_y'],
-        'y_max': bath_info['boundary_y_max']
-    }
-    
-    # Convert bathymetry first
-    convert_netcdf_to_binary(bath_file, "tohoku_bath.bin", 700, 400)
-    
-    # Then convert displacement using bathymetry boundaries
-    convert_netcdf_to_binary(displ_file, "tohoku_displ.bin", 250, 400, 
-                            force_boundaries=bath_bounds)
-    
+    main()
