@@ -22,7 +22,7 @@ Various rendering APIs are used depending on the platform, thanks to bgfx:
 
 ## Features
 - **Scenarios:**
-  - 3 built-in Tsunami scenarios: Tohoku (2011), Chile (2014), Artificial Tsunami
+  - 4 built-in Tsunami scenarios: Tohoku (2011) and Tohoku (Zoom); Chile (2014); Artificial Tsunami
   - 1 custom scenario that takes NetCDF input files for bathymetry and displacement. Examples can be downloaded [here](https://tumde-my.sharepoint.com/:f:/g/personal/erik_lauterwald_tum_de/Eod1ZmKOPutLs8_TxyevuFMB6wDQbcHuwaQ64LJddqgR0A?e=gHidv3)
 - **Views:**
   - Different view types for water height, momentums, bathymetry, and surface level (h, hu, hv, b, h+b)
