@@ -253,7 +253,7 @@ namespace App {
     ImGui::End(); // Controls
 
     ImGui::SetNextWindowSize(ImVec2(310, 210), ImGuiCond_FirstUseEver);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(310, 140), ImVec2(310, 640));
+    ImGui::SetNextWindowSizeConstraints(ImVec2(310, 140), ImVec2(310, std::min(700, m_windowSize.y)));
     ImGui::SetNextWindowPos(ImVec2(m_windowSize.x - 310, 0));
     ImGui::PushStyleColor(ImGuiCol_TitleBgActive, ImGui::GetStyle().Colors[ImGuiCol_TitleBg]);
 
