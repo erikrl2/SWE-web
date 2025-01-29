@@ -35,21 +35,23 @@ namespace App {
     void setNoneScenario();
     bool initializeBlock(bool silent);
     void createGrid(Vec2i n);
-    bool selectScenario();
+    bool selectScenario(bool silentHint = false);
     void startStopSimulation();
     void resetSimulation();
     void setWetDataRange();
     void resetCamera();
     void setCameraTargetCenter();
     void setSelectedScenarioType(ScenarioType scenarioType);
+    void setColorAndValueScale(bool resetValueScale = true);
     void switchView(ViewType viewType);
     void switchBoundary(BoundaryType boundaryType);
     void toggleWireframe();
     void toggleStats();
     void toggleVsync();
+    void resetDisplacementData();
     void applyDisplacement();
     void warn(const char* message);
-    void tryAutoLoadNcFiles(Vec2i dimensions);
+    void tryAutoLoadNcFiles(Vec2i dimensions, bool silent = false);
     bool addBathDisplFile(std::string_view path, int select = 0);
 
     void simulate(float dt);
@@ -99,15 +101,19 @@ namespace App {
     ScenarioType m_scenarioType = ScenarioType::None;
     Vec2i        m_dimensions;
 
-    ViewType     m_viewType          = ViewType::HPlusB;
-    BoundaryType m_boundaryType      = BoundaryType::Outflow;
-    float        m_timeScale         = 60.0f;
-    float        m_endSimulationTime = 0.0;
+    ViewType     m_viewType     = ViewType::HPlusB;
+    BoundaryType m_boundaryType = BoundaryType::Outflow;
+    float        m_timeScale    = 60.0f;
 
 #ifdef ENABLE_NETCDF
     char m_bathymetryFile[128]   = {};
     char m_displacementFile[128] = {};
 #endif
+
+    bool  m_customDisplacement   = false;
+    Vec2f m_displacementPosition = {0.0f, 0.0f}; // range [-.5, .5]
+    float m_displacementRadius   = 100000.0f;
+    float m_displacementHeight   = 10.0f;
 
     bool  m_playing        = false;
     float m_simulationTime = 0.0;

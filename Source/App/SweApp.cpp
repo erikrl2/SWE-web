@@ -85,8 +85,36 @@ namespace App {
     ImGui::SameLine();
     ImGui::TextColored({1, 0, 0, 1}, "%s", m_message);
 
-    if (ImGui::Button("Reapply Displacement")) {
+    if (ImGui::Button("Apply Displacement")) {
       applyDisplacement();
+    }
+
+    ImGui::SameLine();
+    ImGui::Checkbox("Custom", &m_customDisplacement);
+
+    if (m_customDisplacement) {
+      ImGui::SameLine();
+      if (ImGui::Button("Reset##ResetDisplacement")) {
+        resetDisplacementData();
+      }
+      ImGui::Indent();
+      if (isBlockLoaded()) {
+        float domAspect = (m_boundaryPos.y - m_boundaryPos.x) / (m_boundaryPos.w - m_boundaryPos.z);
+        if (drawCoordinatePicker2D("Position", m_displacementPosition, {50.0f * domAspect, 50.0f})) {
+          applyDisplacement();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Select pos by placing the dot\n\n(Quick apply with right click)");
+      }
+      float itemWidth = ImGui::CalcItemWidth() / 2.0f - 12.0f;
+      ImGui::PushItemWidth(itemWidth);
+      ImGui::DragFloat("##DisplHeight", &m_displacementHeight, 0.1f, 0.0f, 0.0f, "%.1f");
+      ImGui::SameLine(0.0f, 4.0f);
+      ImGui::DragFloat("##DisplRadius", &m_displacementRadius, 250.0f, m_gridData.z, FLT_MAX, "%.0f");
+      ImGui::PopItemWidth();
+      ImGui::SameLine(0.0f, 4.0f);
+      ImGui::Text("Height, Radius");
+      ImGui::Unindent();
     }
 
     if (ImGui::BeginCombo("View Type", viewTypeToString(m_viewType).c_str())) {
@@ -112,8 +140,6 @@ namespace App {
 
     ImGui::DragFloat("Time Scale", &m_timeScale, 0.1f, 0.0f, 1.0f / dt, "%.1f");
 
-    ImGui::DragFloat("End Simulation Time", &m_endSimulationTime, 0.5f, 0.0f, std::numeric_limits<float>::max(), "%.1f");
-
     ImGui::SeparatorText("Visualization");
 
     ImGui::BeginDisabled(m_autoScaleDataRange);
@@ -134,16 +160,29 @@ namespace App {
       ImGui::SetKeyboardFocusHere();
       m_setFocusValueScale = false;
     }
-    if (ImGui::DragFloat2("Z-Scale (wet,dry)", m_util, 1.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+
+    float itemWidth = ImGui::CalcItemWidth() / 2.0f - 2.0f;
+    ImGui::PushItemWidth(itemWidth);
+
+    bool   hOrB     = m_viewType == ViewType::H || m_viewType == ViewType::B;
+    float* wetScale = hOrB ? &m_util.z : &m_util.w;
+    if (ImGui::DragFloat("##ZScaleWet", wetScale, hOrB ? 0.25f : 100.0f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat)) {
+      m_util.x = *wetScale;
       setCameraTargetCenter();
+    }
+    ImGui::SameLine(0.0f, 4.0f);
+    ImGui::DragFloat("##ZScaleDry", &m_util.y, 0.25f, 0.0f, 0.0f, "%.0f", ImGuiSliderFlags_NoRoundToFormat);
+    ImGui::PopItemWidth();
+    ImGui::SameLine(0.0f, 4.0f);
+    ImGui::Text("Z-Scale (Wet, Dry)");
+
+    if (ImGui::Button("Reset##ResetScaling")) {
+      setColorAndValueScale();
     }
 
 #ifndef NDEBUG
     ImGui::BeginDisabled();
-    if (ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f)) {
-      m_cameraClipping.x = std::max(0.1f, std::min(m_cameraClipping.x, m_cameraClipping.y - 0.1f));
-      m_cameraClipping.y = std::max(m_cameraClipping.x + 0.1f, m_cameraClipping.y);
-    }
+    ImGui::DragFloat2("Near/Far Clip", m_cameraClipping, 0.1f);
     ImGui::EndDisabled();
 #endif
 
@@ -259,6 +298,7 @@ namespace App {
         addRow("Space", "Start/stop simulation");
         addRow("R", "Reset simulation");
         addRow("F", "Apply displacement");
+        addRow("G", "Toggle custom displacement");
         addRow("E", "Nav focus on z-value scale");
         addRow("H", "Set view type: Height");
         addRow("U", "Set view type: Momentum U");
@@ -268,8 +308,10 @@ namespace App {
         addRow("O", "Set boundary type: Outflow");
         addRow("W", "Set boundary type: Wall");
         addRow("Q", "Auto rescale data range");
+        addRow("J", "Reset data range and scaling");
         addRow("T", "Switch camera type");
         addRow("X", "Reset camera");
+        addRow("M", "Recenter camera");
         addRow("D", "Auto scale data range");
         addRow("L", "Show lines");
         addRow("I", "Show stats");
@@ -305,19 +347,18 @@ namespace App {
 
 #ifdef ENABLE_NETCDF
       if (m_selectedScenarioType == ScenarioType::NetCDF) {
-        ImGui::Text("Requires bathymetry and displacement NetCDF files.");
-        ImGui::Text("Enter paths or drag/drop files to the window.");
-
-        ImGui::SameLine();
-        ImGui::TextDisabled("(?)");
-        ImGui::SetItemTooltip("File name must contain 'bath' or 'displ' to be recognized.");
+        ImGui::Text("Drag-drop GEBCO netCDF files generated from ");
+        ImGui::SameLine(0.0f, 0.0f);
+        ImGui::TextLinkOpenURL("here", "https://download.gebco.net/");
 
         int fileInputTextFlags = ImGuiInputTextFlags_ElideLeft;
 #ifdef __EMSCRIPTEN__
         fileInputTextFlags |= ImGuiInputTextFlags_ReadOnly;
 #endif
         ImGui::InputText("Bathymetry File", m_bathymetryFile, sizeof(m_bathymetryFile), fileInputTextFlags);
+        ImGui::SetItemTooltip("File name must start with 'gebco' or contain 'bath'");
         ImGui::InputText("Displacement File", m_displacementFile, sizeof(m_displacementFile), fileInputTextFlags);
+        ImGui::SetItemTooltip("Optional custom displacement file name must contain 'displ'");
       }
 #endif
 
@@ -458,16 +499,11 @@ namespace App {
 
     createGrid({nx, ny});
 
-    m_dataRanges.x = -0.01f;
-    m_dataRanges.y = 0.01f;
-
     if (!silent) {
-      m_util.x = getInitialZValueScale(m_scenarioType).x;
-      m_util.y = getInitialZValueScale(m_scenarioType).y;
+      setColorAndValueScale();
       resetCamera();
+      resetDisplacementData();
     }
-
-    m_endSimulationTime = 0.0;
 
     m_message = "";
 
@@ -528,8 +564,8 @@ namespace App {
     m_heightMapData = new float[n.x * n.y];
   }
 
-  bool SweApp::selectScenario() {
-    bool silent = m_scenarioType == m_selectedScenarioType && m_dimensions == m_selectedDimensions;
+  bool SweApp::selectScenario(bool silentHint) {
+    bool silent = silentHint && m_scenarioType == m_selectedScenarioType && m_dimensions == m_selectedDimensions;
 
     m_scenarioType          = m_selectedScenarioType;
     m_dimensions            = m_selectedDimensions;
@@ -540,7 +576,10 @@ namespace App {
     return initializeBlock(silent);
   }
 
-  void SweApp::startStopSimulation() { m_playing = !m_playing; }
+  void SweApp::startStopSimulation() {
+    m_playing = !m_playing;
+    m_message = "";
+  }
 
   void SweApp::resetSimulation() {
     if (!isBlockLoaded())
@@ -575,7 +614,11 @@ namespace App {
     Vec3f center;
     center.x = (m_boundaryPos.x + m_boundaryPos.y) * 0.5f;
     center.y = (m_boundaryPos.z + m_boundaryPos.w) * 0.5f;
-    center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.x;
+    if (m_viewType != ViewType::HPlusB) {
+      center.z = (float)getScenarioValue(m_scenario, m_viewType, RealType(center.x), RealType(center.y)) * m_util.x;
+    } else {
+      center.z = 0.0f;
+    }
     m_camera.setTargetCenter(center);
   }
 
@@ -606,8 +649,29 @@ namespace App {
     }
   }
 
+  void SweApp::setColorAndValueScale(bool resetValueScale) {
+    if (!isBlockLoaded())
+      return;
+
+    if (resetValueScale) {
+      m_util.y = getInitialZValueScale(m_scenarioType).y;
+      m_util.z = getInitialZValueScale(m_scenarioType).x;
+      m_util.w = 10000.0f;
+    }
+    m_util.x = m_viewType == ViewType::H || m_viewType == ViewType::B ? m_util.z : m_util.w;
+
+    if (m_viewType != ViewType::HPlusB) {
+      updateGrid();
+      setWetDataRange();
+    } else {
+      m_dataRanges.x = -0.01f;
+      m_dataRanges.y = 0.01f;
+    }
+  }
+
   void SweApp::switchView(ViewType viewType) {
     m_viewType = viewType;
+    setColorAndValueScale(false);
     setCameraTargetCenter();
     m_message = "";
   }
@@ -631,14 +695,38 @@ namespace App {
 #endif
   }
 
+  void SweApp::resetDisplacementData() {
+    m_displacementPosition = {0.0f, 0.0f};
+    m_displacementRadius   = 100000.0f;
+    m_displacementHeight   = 10.0f;
+  }
+
   void SweApp::applyDisplacement() {
     if (!isBlockLoaded())
       return;
 
-    m_block->setWaterHeight([](RealType x, RealType y) -> RealType {
-      SweApp* app = static_cast<SweApp*>(Core::Application::get());
-      return getBlockValue(app->m_block, ViewType::H, x, y) + app->m_scenario->getDisplacement(x, y);
-    });
+    if (!m_customDisplacement) {
+      m_block->setWaterHeight([](RealType x, RealType y) -> RealType {
+        SweApp* app = static_cast<SweApp*>(Core::Application::get());
+        return getBlockValue(app->m_block, ViewType::H, x, y) + app->m_scenario->getDisplacement(x, y);
+      });
+    } else {
+      Vec4f& b = m_boundaryPos;
+      Vec2f& d = m_displacementPosition;
+      Vec2f  r = {m_displacementRadius / (b.y - b.x), m_displacementRadius / (b.w - b.z)};
+      if (d.x - r.x < -0.5f || d.x + r.x > 0.5f || d.y - r.y < -0.5f || d.y + r.y > 0.5f) {
+        return;
+      }
+      m_block->setWaterHeight([](RealType x, RealType y) -> RealType {
+        SweApp* app    = static_cast<SweApp*>(Core::Application::get());
+        Vec4f&  bound  = app->m_boundaryPos;
+        float   displA = app->m_displacementHeight;
+        float   displP = app->m_displacementRadius * 2.0f;
+        Vec2f   displC = {(bound.x + bound.y) * 0.5f, (bound.z + bound.w) * 0.5f};
+        displC += app->m_displacementPosition * Vec2f(bound.y - bound.x, bound.w - bound.z);
+        return getBlockValue(app->m_block, ViewType::H, x, y) + Scenarios::ArtificialTsunamiScenario::getCustomDisplacement(x, y, {displA, displP, displC.x, displC.y});
+      });
+    }
   }
 
   void SweApp::warn(const char* message) {
@@ -667,10 +755,6 @@ namespace App {
     }
 
     m_simulationTime += (float)maxTimeStep;
-
-    if (m_endSimulationTime > 0.0 && m_simulationTime >= m_endSimulationTime) {
-      m_playing = false;
-    }
   }
 
   void SweApp::updateGrid() {
@@ -774,12 +858,18 @@ namespace App {
       if (m_showScenarioSelection && !ImGui::GetIO().NavVisible)
         selectScenario();
       break;
+    case Core::Key::R:
+      resetSimulation();
+      break;
     case Core::Key::Space:
       ImGui::SetNavCursorVisible(false);
       startStopSimulation();
       break;
-    case Core::Key::R:
-      resetSimulation();
+    case Core::Key::F:
+      applyDisplacement();
+      break;
+    case Core::Key::G:
+      m_customDisplacement = !m_customDisplacement;
       break;
     case Core::Key::H:
       switchView(ViewType::H);
@@ -805,12 +895,18 @@ namespace App {
     case Core::Key::Q:
       setWetDataRange();
       break;
+    case Core::Key::J:
+      setColorAndValueScale();
+      break;
     case Core::Key::T:
       m_cameraIs3D = !m_cameraIs3D;
       m_camera.setType(m_camera.getType() == Camera::Type::Orthographic ? Camera::Type::Perspective : Camera::Type::Orthographic);
       break;
     case Core::Key::X:
       resetCamera();
+      break;
+    case Core::Key::M:
+      m_camera.recenter();
       break;
     case Core::Key::D:
       m_autoScaleDataRange = !m_autoScaleDataRange;
@@ -826,9 +922,6 @@ namespace App {
     case Core::Key::P:
       m_vsyncEnabled = !m_vsyncEnabled;
       toggleVsync();
-      break;
-    case Core::Key::F:
-      applyDisplacement();
       break;
     case Core::Key::E:
       m_setFocusValueScale = true;
@@ -861,9 +954,10 @@ namespace App {
         }
       } else if (count == 1) {
         // single bathymetry file
+        std::string oldBathFile = m_bathymetryFile;
         if (addBathDisplFile(paths[0], -1)) {
           m_displacementFile[0] = '\0';
-          tryAutoLoadNcFiles({250, 250});
+          tryAutoLoadNcFiles({250, 250}, oldBathFile == m_bathymetryFile);
         } else if (isBlockLoaded() && m_scenarioType == ScenarioType::NetCDF) {
           // single displacement file
           if (addBathDisplFile(paths[0], 1)) {
@@ -875,13 +969,13 @@ namespace App {
 #endif
   }
 
-  void SweApp::tryAutoLoadNcFiles([[maybe_unused]] Vec2i dimensions) {
+  void SweApp::tryAutoLoadNcFiles([[maybe_unused]] Vec2i dimensions, [[maybe_unused]] bool silent) {
 #ifdef ENABLE_NETCDF
     auto typeBackup        = m_selectedScenarioType;
     auto dimensionsBackup  = m_selectedDimensions;
     m_selectedScenarioType = ScenarioType::NetCDF;
     m_selectedDimensions   = dimensions;
-    if (!selectScenario()) {
+    if (!selectScenario(silent)) {
       m_bathymetryFile[0]    = '\0';
       m_displacementFile[0]  = '\0';
       m_selectedScenarioType = typeBackup;
@@ -896,7 +990,7 @@ namespace App {
     if (filepath.extension() == ".nc") {
       std::string usablePath = removeDriveLetter(path.data()); // Remove "C:" on windows
       std::string filename   = filepath.filename().string();
-      if (select <= 0 && filename.find("bath") != std::string::npos) {
+      if (select <= 0 && (filename.find("bath") != std::string::npos || filename.starts_with("gebco"))) {
         strncpy(m_bathymetryFile, usablePath.c_str(), sizeof(m_bathymetryFile) - 1);
         return true;
       } else if (select >= 0 && filename.find("displ") != std::string::npos) {

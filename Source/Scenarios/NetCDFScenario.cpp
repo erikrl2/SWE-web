@@ -15,14 +15,19 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
 
     netCDF::NcFile dataFile(bathymetryFile, netCDF::NcFile::read);
 
-    bNX_ = dataFile.getDim("x").getSize();
-    bNY_ = dataFile.getDim("y").getSize();
+    bool        useXYZ   = !dataFile.getDim("x").isNull();
+    std::string xVarName = useXYZ ? "x" : "lon";
+    std::string yVarName = useXYZ ? "y" : "lat";
+    std::string zVarName = useXYZ ? "z" : "elevation";
+
+    bNX_ = dataFile.getDim(xVarName).getSize();
+    bNY_ = dataFile.getDim(yVarName).getSize();
 
     assert(bNX_ >= 2 && bNY_ >= 2);
 
-    auto xVar = dataFile.getVar("x");
-    auto yVar = dataFile.getVar("y");
-    auto bVar = dataFile.getVar("z");
+    auto xVar = dataFile.getVar(xVarName);
+    auto yVar = dataFile.getVar(yVarName);
+    auto bVar = dataFile.getVar(zVarName);
 
     // Sample two coordinate values to determine cell size
     RealType sampleX[2];
@@ -33,6 +38,11 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
 
     bDX_ = sampleX[1] - sampleX[0];
     bDY_ = sampleY[1] - sampleY[0];
+
+    if (!useXYZ) { // Convert to meters
+      bDX_ *= RealType(111139.0);
+      bDY_ *= RealType(111139.0);
+    }
 
     // Determine bathymetry domain boundaries
     boundaryPos_[0] = sampleX[0] - bDX_ / 2.0;
@@ -66,14 +76,19 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
 
     netCDF::NcFile dataFile(displacementFile, netCDF::NcFile::read);
 
-    dNX_ = dataFile.getDim("x").getSize();
-    dNY_ = dataFile.getDim("y").getSize();
+    bool        useXYZ   = !dataFile.getDim("x").isNull();
+    std::string xVarName = useXYZ ? "x" : "lon";
+    std::string yVarName = useXYZ ? "y" : "lat";
+    std::string zVarName = useXYZ ? "z" : "elevation";
+
+    dNX_ = dataFile.getDim(xVarName).getSize();
+    dNY_ = dataFile.getDim(yVarName).getSize();
 
     assert(dNX_ >= 2 && dNY_ >= 2);
 
-    auto xVar = dataFile.getVar("x");
-    auto yVar = dataFile.getVar("y");
-    auto dVar = dataFile.getVar("z");
+    auto xVar = dataFile.getVar(xVarName);
+    auto yVar = dataFile.getVar(yVarName);
+    auto dVar = dataFile.getVar(zVarName);
 
     // Sample two coordinate values to determine cell size
     RealType sampleX[2];
@@ -92,10 +107,14 @@ Scenarios::NetCDFScenario::NetCDFScenario(const std::string& bathymetryFile, con
     dBoundaryPos_[3] = dBoundaryPos_[2] + dDY_ * dNY_;
 
     // Displacement should be located within the domain of the bathymetry
-    assert(dBoundaryPos_[0] >= boundaryPos_[0]);
-    assert(dBoundaryPos_[1] <= boundaryPos_[1]);
-    assert(dBoundaryPos_[2] >= boundaryPos_[2]);
-    assert(dBoundaryPos_[3] <= boundaryPos_[3]);
+    // assert(dBoundaryPos_[0] >= boundaryPos_[0]);
+    // assert(dBoundaryPos_[1] <= boundaryPos_[1]);
+    // assert(dBoundaryPos_[2] >= boundaryPos_[2]);
+    // assert(dBoundaryPos_[3] <= boundaryPos_[3]);
+    if (dBoundaryPos_[0] < boundaryPos_[0] || dBoundaryPos_[1] > boundaryPos_[1] || dBoundaryPos_[2] < boundaryPos_[2] || dBoundaryPos_[3] > boundaryPos_[3]) {
+      success_ = false;
+      return;
+    }
 
     dOriginX_ = dBoundaryPos_[0];
     dOriginY_ = dBoundaryPos_[2];

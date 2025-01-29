@@ -23,15 +23,15 @@ Various rendering APIs are used depending on the platform, thanks to bgfx:
 ## Features
 - **Scenarios:**
   - 4 built-in Tsunami scenarios: Tohoku (2011) and Tohoku (Zoom); Chile (2014); Artificial Tsunami
-  - 1 custom scenario that takes NetCDF input files for bathymetry and displacement. Examples can be downloaded [here](https://tumde-my.sharepoint.com/:f:/g/personal/erik_lauterwald_tum_de/Eod1ZmKOPutLs8_TxyevuFMB6wDQbcHuwaQ64LJddqgR0A?e=gHidv3)
+  - 1 custom scenario that takes NetCDF input files for bathymetry and optionally displacement. NetCDF grids can be created with the official [GEBCO tool](https://download.gebco.net/).
 - **Views:**
   - Different view types for water height, momentums, bathymetry, and surface level (h, hu, hv, b, h+b)
 - **Boundaries:**
   - Two boundary types: Outflow and Wall
 - **Simulation Controls:**
   - Reapply the initial displacement to create new waves at runtime
+  - Create custom tsunamis by setting the size and position of a default wave
   - Time scaling to slow down the simulation
-  - Specify an end simulation time at which the simulation stops
 - **Visualization:**
   - Set the data range for a customizable 3-color gradient or use automatic scaling
   - Scale the z-value of wet and dry cells for better visualization

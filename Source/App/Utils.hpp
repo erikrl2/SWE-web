@@ -31,4 +31,7 @@ namespace App {
 
   Vec2f getInitialZValueScale(ScenarioType type);
 
+  bool drawCoordinatePicker2D(const char* label, Vec2f& coords, const Vec2f& size);
+
+
 } // namespace App

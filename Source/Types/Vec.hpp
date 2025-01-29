@@ -35,6 +35,19 @@ struct Vec2f {
   Vec2f operator+(const Vec2f& other) const { return Vec2f(x + other.x, y + other.y); }
   Vec2f operator-(const Vec2f& other) const { return Vec2f(x - other.x, y - other.y); }
   Vec2f operator*(float scalar) const { return Vec2f(x * scalar, y * scalar); }
+
+  Vec2f operator*(const Vec2f& other) const { return Vec2f(x * other.x, y * other.y); }
+
+  Vec2f& operator+=(const Vec2f& other) {
+    x += other.x;
+    y += other.y;
+    return *this;
+  }
+  Vec2f& operator-=(const Vec2f& other) {
+    x -= other.x;
+    y -= other.y;
+    return *this;
+  }
 };
 
 struct Vec3f {

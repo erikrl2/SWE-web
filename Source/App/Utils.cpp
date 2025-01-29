@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cmath>
 #include <filesystem>
+#include <imgui.h>
 
 namespace App {
 
@@ -150,19 +151,19 @@ namespace App {
     switch (type) {
 #ifdef ENABLE_NETCDF
     case ScenarioType::NetCDF:
-      return {1.0f, 1.0f};
+      return {20.0f, 20.0f};
 #endif
     case ScenarioType::Tohoku:
-      return {100.0f, 100.0f};
+      return {40.0f, 40.0f};
     case ScenarioType::TohokuZoomed:
       return {20.0f, 20.0f};
     case ScenarioType::Chile:
       return {100.0f, 100.0f};
     case ScenarioType::ArtificialTsunami:
-      return {1000.0f, 1.0f};
+      return {100000.0f, 0.0f};
 #ifndef NDEBUG
     case ScenarioType::Test:
-      return {1.0f, 1.0f};
+      return {1.0f, 0.0f};
 #endif
     case ScenarioType::None:
       return {0.0f, 0.0f};
@@ -170,6 +171,33 @@ namespace App {
       assert(false);
     }
     return {};
+  }
+
+  bool drawCoordinatePicker2D(const char* label, Vec2f& coords, const Vec2f& size) {
+    ImGui::InvisibleButton(label, ImVec2(size.x, size.y));
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    ImVec2      p0       = ImGui::GetItemRectMin();
+    ImVec2      p1       = ImGui::GetItemRectMax();
+
+    drawList->AddRect(p0, p1, IM_COL32(255, 255, 255, 255));
+
+    Vec2f normCoords = {0.5f + coords.x, 0.5f - coords.y};
+
+    if (ImGui::IsItemActive()) {
+      ImVec2 mousePos = ImGui::GetMousePos();
+      normCoords.x    = (mousePos.x - p0.x) / (p1.x - p0.x);
+      normCoords.y    = (mousePos.y - p0.y) / (p1.y - p0.y);
+      normCoords.x    = bx::clamp(normCoords.x, 0.0f, 1.0f);
+      normCoords.y    = bx::clamp(normCoords.y, 0.0f, 1.0f);
+
+      coords.x = normCoords.x - 0.5f;
+      coords.y = 0.5f - normCoords.y;
+    }
+
+    ImVec2 cursorPos = ImVec2(p0.x + normCoords.x * (p1.x - p0.x), p0.y + normCoords.y * (p1.y - p0.y));
+    drawList->AddCircleFilled(cursorPos, 2.5f, IM_COL32(255, 0, 0, 255));
+
+    return ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
   }
 
 } // namespace App
