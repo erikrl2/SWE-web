@@ -48,6 +48,12 @@ struct Vec2f {
     y -= other.y;
     return *this;
   }
+
+  Vec2f& operator*=(float scalar) {
+    x *= scalar;
+    y *= scalar;
+    return *this;
+  }
 };
 
 struct Vec3f {

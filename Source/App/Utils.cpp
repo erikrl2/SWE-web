@@ -197,7 +197,7 @@ namespace App {
     ImVec2 cursorPos = ImVec2(p0.x + normCoords.x * (p1.x - p0.x), p0.y + normCoords.y * (p1.y - p0.y));
     drawList->AddCircleFilled(cursorPos, 2.5f, IM_COL32(255, 0, 0, 255));
 
-    return ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
+    return (ImGui::IsItemHovered() || ImGui::IsItemActive()) && ImGui::IsMouseClicked(ImGuiMouseButton_Right);
   }
 
 } // namespace App

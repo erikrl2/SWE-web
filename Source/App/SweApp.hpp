@@ -60,6 +60,10 @@ namespace App {
     void updateCamera();
     void render();
 
+    void drawControlWindow(float dt);
+    void drawScenarioSelectionWindow();
+    void drawHelpWindow();
+
   private:
     bgfx::ProgramHandle m_program;
 
@@ -124,8 +128,8 @@ namespace App {
 
     bool         m_showControls          = true;
     bool         m_showScenarioSelection = false;
-    Vec2i        m_selectedDimensions    = {100, 100};
-    ScenarioType m_selectedScenarioType  = ScenarioType::ArtificialTsunami;
+    Vec2i        m_selectedDimensions    = {};
+    ScenarioType m_selectedScenarioType  = ScenarioType::None;
     bool         m_cameraIs3D            = m_camera.getType() == Camera::Type::Perspective;
     bool         m_showStats             = m_debugFlags & BGFX_DEBUG_STATS;
     bool         m_showLines             = m_stateFlags & BGFX_STATE_PT_LINES;
