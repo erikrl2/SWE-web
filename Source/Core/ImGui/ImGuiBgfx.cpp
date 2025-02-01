@@ -13,10 +13,10 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_internal.h>
 
-#include "imgui/fs_imgui.bin.h"
-#include "imgui/fs_imgui_image.bin.h"
-#include "imgui/vs_imgui.bin.h"
-#include "imgui/vs_imgui_image.bin.h"
+#include "Shaders/imgui/fs_imgui.bin.h"
+#include "Shaders/imgui/fs_imgui_image.bin.h"
+#include "Shaders/imgui/vs_imgui.bin.h"
+#include "Shaders/imgui/vs_imgui_image.bin.h"
 
 namespace Core {
 

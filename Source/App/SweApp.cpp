@@ -12,8 +12,8 @@
 #include "Scenarios/NetCDFScenario.hpp"
 #include "Scenarios/RealisticScenario.hpp"
 #include "Scenarios/TestScenario.hpp"
-#include "swe/fs_swe.bin.h"
-#include "swe/vs_swe.bin.h"
+#include "Shaders/swe/fs_swe.bin.h"
+#include "Shaders/swe/vs_swe.bin.h"
 #include "Utils.hpp"
 
 namespace App {

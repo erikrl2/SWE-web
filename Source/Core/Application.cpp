@@ -21,6 +21,8 @@
 
 #include <iostream>
 
+#include "Images/icon48x48.h"
+
 namespace Core {
 
   Application::Application(const std::string& title, int width, int height):
@@ -46,6 +48,14 @@ namespace Core {
       assert(false);
       return;
     }
+
+#ifndef __EMSCRIPTEN__
+    GLFWimage icons[1];
+    icons[0].width  = 48;
+    icons[0].height = 48;
+    icons[0].pixels = icon48x48;
+    glfwSetWindowIcon(m_window, 1, icons);
+#endif
 
 #ifdef __EMSCRIPTEN__
     emscripten_set_resize_callback(EMSCRIPTEN_EVENT_TARGET_WINDOW, nullptr, true, emscriptenResizeCallback);
