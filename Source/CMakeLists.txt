@@ -31,10 +31,11 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
     -sUSE_GLFW=3
     -fwasm-exceptions
     --shell-file=${CMAKE_SOURCE_DIR}/Source/Shell.html
-    --preload-file ${CMAKE_BINARY_DIR}/Assets/Data@/Assets/Data
+    --preload-file ${ASSETS_DIR}/Data@/Assets/Data
   )
   target_compile_options(${SWE_PROJECT_NAME} PRIVATE -fwasm-exceptions)
   set(CMAKE_EXECUTABLE_SUFFIX ".html")
+  configure_file(${ASSETS_DIR}/Images/favicon.ico ${CMAKE_BINARY_DIR}/favicon.ico COPYONLY)
 endif()
 
 if(CMAKE_GENERATOR MATCHES "Visual Studio")
@@ -44,9 +45,11 @@ endif()
 
 target_link_libraries(${SWE_PROJECT_NAME}-App PRIVATE ${SWE_PROJECT_NAME})
 
-add_custom_command(
-  TARGET ${SWE_PROJECT_NAME}-App PRE_LINK
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-  ${CMAKE_SOURCE_DIR}/Assets/Data
-  $<TARGET_FILE_DIR:${SWE_PROJECT_NAME}-App>/Assets/Data
-)
+if(NOT CMAKE_SYSTEM_NAME STREQUAL "Emscripten")
+  add_custom_command(
+    TARGET ${SWE_PROJECT_NAME}-App POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${ASSETS_DIR}/Data
+    $<TARGET_FILE_DIR:${SWE_PROJECT_NAME}-App>/Assets/Data
+  )
+endif()
