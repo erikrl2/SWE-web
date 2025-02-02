@@ -368,6 +368,8 @@ namespace App {
       m_dataRanges.x = -0.01f;
       m_dataRanges.y = 0.01f;
     }
+
+    setCameraTargetCenter();
   }
 
   void SweApp::switchView(ViewType viewType) {
