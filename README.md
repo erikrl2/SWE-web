@@ -3,7 +3,14 @@
 SWE-Web is an interactive cross-platform 3D application for simulating artificial and realistic tsunamis.
 By supporting [NetCDF](https://en.wikipedia.org/wiki/NetCDF) data input, the application can load the [bathymetry](https://en.wikipedia.org/wiki/Bathymetry) of real oceans and the displacement caused by earthquakes.
 
-A live version of the Web-App is available at [swe-web.de](https://swe-web.de/), running the binary files in the `Public` directory of `main`.
+~~A live version of the Web-App is available at [swe-web.de](https://swe-web.de/), running the binary files in the `Public` directory of `main`.~~
+
+Binaries are available on the release page.
+
+![Image](https://github.com/user-attachments/assets/9e03df95-04e0-4080-b845-58562fb4067d)
+![Image](https://github.com/user-attachments/assets/a4dc2773-d7d8-4c2f-85f3-2ea251be67db)
+![Image](https://github.com/user-attachments/assets/99bc0a07-465c-4f6e-8102-72866b069d9a)
+![Image](https://github.com/user-attachments/assets/95434a25-9807-47d9-bc1e-c8ded17908c8)
 
 ## Libraries Used
 - [glfw](https://github.com/glfw/glfw)
